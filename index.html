@@ -651,7 +651,10 @@
   segWire("leaseTiming",function(v){leaseG=(v==="adv")?1:0;runLease();});
   $("#lnCalc").addEventListener("click",runLoan);
   $("#lsCalc").addEventListener("click",runLease);
-  $("#invAdd").addEventListener("click",function(){syncInv();invData.push({amt:"0",n:"1",date:(invData.length&&invData[invData.length-1].date)||""});buildInv();});
+  $("#invAdd").addEventListener("click",function(){syncInv();
+    var PY=parseInt($("#invPY").value,10)||12, last=invData[invData.length-1], nd="";
+    if(last&&last.date){ var d0=parseDate(last.date); if(d0){ var n=Math.max(1,Math.round(num(last.n))||1), p=addByFreq(d0,PY,n); nd=p.y+"-"+String(p.m).padStart(2,"0")+"-"+String(p.d).padStart(2,"0"); } }
+    invData.push({amt:"0",n:"1",date:nd});buildInv();});
   $("#invCalc").addEventListener("click",runInv);
   $("#invBasis").addEventListener("change",runInv);
   $("#invMethod").addEventListener("change",runInv);
