@@ -106,6 +106,12 @@
   .stat{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
   .stat .k{font-size:10px;font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
   .stat .v{font-family:var(--mono);font-weight:600;font-size:15px;margin-top:3px}
+  .ctrlbox{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);margin:2px 0 16px;overflow:hidden}
+  .ctrlbox>summary{padding:11px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);list-style:none}
+  .ctrlbox>summary::-webkit-details-marker{display:none}
+  .ctrlbox>summary::before{content:"⚙  "}
+  .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 14px 14px}
+  .cgrid .field{margin-bottom:0}
   details.sched{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
   details.sched summary{padding:14px 18px;cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;align-items:center;gap:8px}
   details.sched summary::-webkit-details-marker{display:none}
@@ -274,6 +280,15 @@
             <div class="field"><label>Periods / year</label>
               <select class="inp" id="invPY"><option value="12">Monthly</option><option value="4">Quarterly</option><option value="2">Semi-annual</option><option value="1">Yearly</option></select></div>
           </div>
+          <details class="ctrlbox" open>
+            <summary>How interest is calculated</summary>
+            <div class="cgrid">
+              <div class="field"><label>Compounding</label>
+                <select class="inp" id="invBasis"><option value="nom">Nominal (rate ÷ periods)</option><option value="eff">Effective annual</option><option value="cont">Continuous</option></select></div>
+              <div class="field"><label>Method</label>
+                <select class="inp" id="invMethod"><option value="compound">Compound (normal)</option><option value="simple">Simple — U.S. Rule</option></select></div>
+            </div>
+          </details>
           <button class="btn" id="invCalc" type="button">Solve / Analyze</button>
         </div>
       </div>
@@ -344,6 +359,19 @@
       prin=regP; pay=interest+prin; bal-=prin; rows.push({p:p,pay:pay,interest:interest,prin:prin,bal:bal}); totI+=interest;totP+=prin;
     }
     return {rows:rows,totI:totI,totP:totP};
+  }
+
+  /* ---- interest basis + stream amortization ---- */
+  function getRP(annual,PY,basis){ if(basis==="eff")return Math.pow(1+annual,1/PY)-1; if(basis==="cont")return Math.exp(annual/PY)-1; return annual/PY; }
+  function annFromRP(rp,PY,basis){ if(basis==="eff")return Math.pow(1+rp,PY)-1; if(basis==="cont")return Math.log(1+rp)*PY; return rp*PY; }
+  function basisLabel(b){ return {nom:"nominal",eff:"effective",cont:"continuous"}[b]||"nominal"; }
+  function methodLabel(m){ return m==="simple"?"simple interest · U.S. Rule":"compound"; }
+  function streamAmort(series,rp,method){ var rows=[],bal=0,accr=0;
+    for(var t=0;t<series.length;t++){ var cf=series[t],interest=bal*rp;
+      if(method==="simple"){ accr+=interest; if(cf<0){bal+=-cf;} else { var payInt=Math.min(cf,accr); accr-=payInt; bal-=(cf-payInt); } }
+      else { bal=bal+interest-cf; }
+      rows.push({t:t,cf:cf,interest:interest,bal:bal});
+    } return rows;
   }
 
   /* ---- charts (canvas) ---- */
@@ -475,11 +503,10 @@
   function runInv(){
     var err=$("#invErr");err.classList.remove("show");
     try{ syncInv();
-      var PY=parseInt($("#invPY").value,10);
+      var PY=parseInt($("#invPY").value,10), basis=$("#invBasis").value, method=$("#invMethod").value;
       var rateStr=$("#invRate").value, rateUnknown=isUnk(rateStr);
       var annual=rateUnknown?NaN:num(rateStr)/100;
       if(!rateUnknown && !isFinite(annual)) throw "Enter a rate, or type X to solve it.";
-      // expand flows; tag the one unknown amount if present
       var flows=[],t=0,unkAmt=-1,nUnkAmt=0;
       invData.forEach(function(ev,ei){ var n=Math.max(1,Math.round(num(ev.n))||1); var u=isUnk(ev.amt);
         if(u){unkAmt=ei;nUnkAmt++;}
@@ -493,25 +520,31 @@
         if(b===undefined)return NaN; for(var it=0;it<200;it++){var m=(a+b)/2,fm=npvP(m);if(Math.abs(fm)<1e-7||(b-a)<1e-13)return m;if(npvP(a)*fm<0)b=m;else a=m;} return (a+b)/2; }
       var solvedLabel,solvedVal,bigCls="";
       if(unkAmt>=0){
-        var rp=annual/PY,known=0,dsum=0;
+        if(rateUnknown) throw "Enter a rate to solve a cash flow.";
+        var rp=getRP(annual,PY,basis),known=0,dsum=0;
         flows.forEach(function(fl){var df=Math.pow(1+rp,-fl.t); if(fl.evIdx===unkAmt)dsum+=df; else known+=fl.amt*df;});
         if(Math.abs(dsum)<1e-12) throw "Can't solve that amount at this rate.";
         var amt=-known/dsum; flows.forEach(function(fl){if(fl.evIdx===unkAmt)fl.amt=amt;});
         invData[unkAmt].amt=amt.toFixed(2);
         solvedLabel="Solved cash flow"; solvedVal=money(amt); bigCls=amt<0?"neg":"pos";
       }
-      var irrP = rateUnknown? solveIRR() : solveIRR();
-      var irr = isFinite(irrP)? irrP*PY : NaN;
+      var irrP=solveIRR(), irr=isFinite(irrP)?annFromRP(irrP,PY,basis):NaN;
       if(rateUnknown){ if(!isFinite(irr)) throw "No IRR exists — the cash flows must change sign (some in, some out)."; annual=irr; solvedLabel="Yield · IRR"; solvedVal=(irr*100).toFixed(3)+"% <small>/ yr</small>"; bigCls="pos"; }
-      var theNPV = npvP(annual/PY);
+      var rp0=getRP(annual,PY,basis), theNPV=npvP(rp0);
       if(!solvedLabel){ solvedLabel="NPV at "+(annual*100).toFixed(1)+"%"; solvedVal=money(theNPV); bigCls=theNPV<0?"neg":"pos"; }
       var series=flows.map(function(f){return f.amt}), net=series.reduce(function(s,x){return s+x},0);
-      var html='<div class="bigresult"><div class="rl">'+solvedLabel+'</div><div class="rv '+bigCls+'" style="color:'+(bigCls==="neg"?"var(--neg)":bigCls==="pos"?"var(--pos)":"var(--accent-ink)")+'">'+solvedVal+'</div></div>';
-      html+='<div class="summary">'+(isFinite(irr)?('This stream yields <b>'+(irr*100).toFixed(2)+'%</b> a year (IRR). '):'')+'At <b>'+(annual*100).toFixed(1)+'%</b>, its net present value is <b class="'+(theNPV<0?'neg':'pos')+'">'+money0(theNPV)+'</b>'+(Math.abs(theNPV)<1?' — it breaks even at this rate':'')+'. Undiscounted, the flows net to <b>'+money0(net)+'</b>.</div>';
+      var amRows=streamAmort(series,rp0,method);
+      var html='<div class="bigresult"><div class="rl">'+solvedLabel+'</div><div class="rv" style="color:'+(bigCls==="neg"?"var(--neg)":bigCls==="pos"?"var(--pos)":"var(--accent-ink)")+'">'+solvedVal+'</div></div>';
+      html+='<div class="summary">'+(isFinite(irr)?('This stream yields <b>'+(irr*100).toFixed(2)+'%</b> a year (IRR). '):'')+'At <b>'+(annual*100).toFixed(1)+'%</b> ('+basisLabel(basis)+', '+methodLabel(method)+'), NPV is <b class="'+(theNPV<0?'neg':'pos')+'">'+money0(theNPV)+'</b>'+(Math.abs(theNPV)<1?' — breaks even at this rate':'')+'. Undiscounted net: <b>'+money0(net)+'</b>.</div>';
       html+='<div class="statgrid">'+statHTML("NPV @ "+(annual*100).toFixed(1)+"%",money0(theNPV))+statHTML("IRR / yr",isFinite(irr)?(irr*100).toFixed(3)+"%":"n/a")+statHTML("Net (undisc.)",money0(net))+statHTML("Periods",flows.length+"")+'</div>';
       html+='<div class="charts"><div class="chartbox"><h4>Cash flows by period</h4><canvas id="invBars"></canvas></div><div class="chartbox"><h4>Cumulative (payback)</h4><canvas id="invArea"></canvas></div></div>';
+      html+='<details class="sched" open><summary>Amortization<span class="tw" id="invCsv">CSV ↓</span></summary><div class="twrap"><table><thead><tr><th>#</th><th>Cash flow</th><th>Interest</th><th>Balance</th></tr></thead><tbody id="invAmBody"></tbody></table></div></details>';
       $("#invResult").innerHTML=html;
-      if(unkAmt>=0) buildInv(); // reflect solved amount back into the grid
+      var bod=$("#invAmBody"),frag=document.createDocumentFragment();
+      amRows.forEach(function(r){ var tr=document.createElement("tr"); tr.innerHTML='<td>'+r.t+'</td><td style="color:'+(r.cf<0?"var(--neg)":"var(--pos)")+'">'+money(r.cf)+'</td><td>'+money(r.interest)+'</td><td>'+money(r.bal)+'</td>'; frag.appendChild(tr); });
+      bod.appendChild(frag);
+      $("#invCsv").addEventListener("click",function(ev){ ev.preventDefault(); var lines=["Period,Cash flow,Interest,Balance"]; amRows.forEach(function(r){lines.push([r.t,r.cf.toFixed(2),r.interest.toFixed(2),r.bal.toFixed(2)].join(","))}); dl(lines.join("\n"),"cashflow-amortization.csv"); });
+      if(unkAmt>=0) buildInv();
       var cum=[],run=0; series.forEach(function(v){run+=v;cum.push(run);});
       drawFlowBars($("#invBars"),series); drawCum($("#invArea"),cum);
       lastRedraw=function(){ if($("#invBars")){drawFlowBars($("#invBars"),series);drawCum($("#invArea"),cum);} };
@@ -585,6 +618,9 @@
   $("#lsCalc").addEventListener("click",runLease);
   $("#invAdd").addEventListener("click",function(){syncInv();invData.push({amt:"0",n:"1"});buildInv();});
   $("#invCalc").addEventListener("click",runInv);
+  $("#invBasis").addEventListener("change",runInv);
+  $("#invMethod").addEventListener("change",runInv);
+  $("#invPY").addEventListener("change",runInv);
   $("#tvmCalc").addEventListener("click",runTVM);
   $$(".adv-tab").forEach(function(t){t.addEventListener("click",function(){$$(".adv-tab").forEach(function(x){x.setAttribute("aria-selected","false")});t.setAttribute("aria-selected","true");$$(".apanel").forEach(function(p){p.classList.remove("active")});$("#"+t.dataset.ap).classList.add("active");});});
   // enter-to-calc on loan/lease inputs
