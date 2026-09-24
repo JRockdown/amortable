@@ -98,6 +98,10 @@
   .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--muted)}
   .legend span{display:inline-flex;align-items:center;gap:6px}
   .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:10px;margin-bottom:18px}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+  .stat .k{font-size:10px;font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+  .stat .v{font-family:var(--mono);font-weight:600;font-size:15px;margin-top:3px}
   details.sched{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
   details.sched summary{padding:14px 18px;cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;align-items:center;gap:8px}
   details.sched summary::-webkit-details-marker{display:none}
@@ -147,28 +151,28 @@
   <!-- ===== HOME ===== -->
   <section class="view active" id="v-home">
     <div class="hero">
-      <h1>What do you want to figure out?</h1>
-      <p>Loan payments, lease rates, investment returns — the time-value math, made simple and visual. Nothing leaves your browser.</p>
+      <h1>Price it, solve it, amortize it.</h1>
+      <p>Lease pricing, implicit-rate and yield analysis, and amortization — built for leasing and finance professionals. Everything runs in your browser.</p>
     </div>
     <div class="cards">
-      <button class="qcard" type="button" data-go="loan">
-        <div class="ic">🏦</div><h3>Loan or mortgage</h3>
-        <p>Find the payment, the rate, the amount you can borrow, or the payoff time.</p>
-      </button>
       <button class="qcard" type="button" data-go="lease">
-        <div class="ic">🚗</div><h3>Lease</h3>
-        <p>Solve the payment, the built-in interest rate, or the residual / buyout value.</p>
+        <div class="ic">📄</div><h3>Lease</h3>
+        <p>Solve the payment, implicit rate &amp; money factor, or residual — advance or arrears, with cap reduction.</p>
+      </button>
+      <button class="qcard" type="button" data-go="loan">
+        <div class="ic">🏦</div><h3>Loan / financing</h3>
+        <p>Payment, rate, amount, or term — conventional financing and lease-vs-loan comparison.</p>
       </button>
       <button class="qcard" type="button" data-go="invest">
-        <div class="ic">📈</div><h3>Investment</h3>
-        <p>Get the return (IRR) and present value (NPV) of any stream of cash flows.</p>
+        <div class="ic">📈</div><h3>Yield / cash flow</h3>
+        <p>IRR, NPV, and present value of any cash-flow stream.</p>
       </button>
       <button class="qcard adv" type="button" data-go="advanced">
         <div class="ic">⚙️</div><h3>Advanced</h3>
-        <p>Full TVM solver, amortization with rate steps, and dated NPV/IRR with day-counts.</p>
+        <p>Full TVM solver — solve any of N, rate, PV, payment, or FV.</p>
       </button>
     </div>
-    <p class="homefoot">Built for clarity. For lending or accounting, verify before you rely on it.</p>
+    <p class="homefoot">Estimates for structuring and analysis — confirm against your booking system before you rely on them.</p>
   </section>
 
   <!-- ===== LOAN ===== -->
@@ -212,25 +216,33 @@
       <div class="card">
         <div class="card-h"><h2>Lease details</h2><p>A lease is a loan with a leftover value (the residual) at the end.</p></div>
         <div class="card-b">
-          <div class="goal">I want to find</div>
+          <div class="goal">Solve for</div>
           <div class="chips" id="leaseGoal">
             <button class="chip-b" type="button" data-v="pmt" aria-pressed="true">Payment</button>
-            <button class="chip-b" type="button" data-v="rate">Interest rate</button>
+            <button class="chip-b" type="button" data-v="rate">Implicit rate</button>
             <button class="chip-b" type="button" data-v="res">Residual</button>
           </div>
           <div class="err" id="leaseErr"></div>
-          <div class="field" data-f="amt"><label>Cap cost <span class="sub">price being financed</span></label>
+          <div class="field" data-f="amt"><label>Capitalized cost <span class="sub">amount financed</span></label>
             <div class="inwrap money"><span class="pre">$</span><input class="inp" id="lsAmt" value="48,000"></div></div>
-          <div class="field" data-f="rate"><label>Interest rate <span class="sub">per year</span></label>
+          <div class="field"><label>Cap cost reduction <span class="sub">down / trade — optional</span></label>
+            <div class="inwrap money"><span class="pre">$</span><input class="inp" id="lsCapRed" value="0"></div></div>
+          <div class="field" data-f="rate"><label>Implicit rate <span class="sub">annual %</span></label>
             <div class="inwrap pct"><input class="inp" id="lsRate" value="7"><span class="post">%</span></div></div>
           <div class="two">
             <div class="field" data-f="term"><label>Term <span class="sub">months</span></label><input class="inp" id="lsTerm" value="36"></div>
             <div class="field" data-f="res"><label>Residual <span class="sub">end value</span></label>
               <div class="inwrap money"><span class="pre">$</span><input class="inp" id="lsRes" value="26,000"></div></div>
           </div>
-          <div class="field" data-f="pmt"><label>Monthly payment</label>
+          <div class="field" data-f="pmt"><label>Payment <span class="sub">per period</span></label>
             <div class="inwrap money"><span class="pre">$</span><input class="inp" id="lsPmt" value="700"></div></div>
-          <button class="btn" id="lsCalc" type="button">Calculate</button>
+          <div class="field"><label>Payment timing</label>
+            <div class="chips" id="leaseTiming" style="margin-bottom:0">
+              <button class="chip-b" type="button" data-v="adv" aria-pressed="true">In advance</button>
+              <button class="chip-b" type="button" data-v="arr">In arrears</button>
+            </div>
+          </div>
+          <button class="btn" id="lsCalc" type="button" style="margin-top:8px">Calculate</button>
         </div>
       </div>
       <div id="leaseResult"></div>
@@ -401,30 +413,39 @@
   function perLabel(f){ return {12:"/month",26:"/2 weeks",24:"/half-month",4:"/quarter",2:"/half-year",1:"/year"}[f]||"/period"; }
 
   /* ================= LEASE FLOW ================= */
-  var leaseGoal="pmt";
-  function leaseFields(){ ["amt","rate","term","res","pmt"].forEach(function(f){ var el=$('#v-lease [data-f="'+f+'"]'); if(el) el.style.display=(f===leaseGoal)?"none":""; }); }
+  var leaseGoal="pmt", leaseG=1; // 1 = in advance (annuity-due), default for leases
+  function leaseFields(){ ["rate","res","pmt"].forEach(function(f){ var el=$('#v-lease [data-f="'+f+'"]'); if(el) el.style.display=(f===leaseGoal)?"none":""; }); }
+  function leaseCurve(net,i,N,pmt,res,g){ var bals=[net],bal=net,p;
+    if(g===1){ bal-=pmt; bals.push(Math.max(bal,res)); for(p=2;p<=N;p++){ bal=bal+bal*i-pmt; bals.push(Math.max(bal,res)); } }
+    else { for(p=1;p<=N;p++){ bal-=(pmt-bal*i); bals.push(Math.max(bal,res)); } }
+    return bals;
+  }
+  function statHTML(k,v,cls){ return '<div class="stat"><div class="k">'+k+'</div><div class="v mono '+(cls||"")+'">'+v+'</div></div>'; }
   function runLease(){
     var err=$("#leaseErr");err.classList.remove("show");
     try{
-      var freq=12, amt=num($("#lsAmt").value), rate=num($("#lsRate").value), N=Math.round(num($("#lsTerm").value)), res=num($("#lsRes").value), pmtIn=num($("#lsPmt").value);
-      var i=rate/100/freq, label,val,unit="";
-      if(leaseGoal!=="rate"&&!(rate>=0))throw "Enter the interest rate.";
-      if(!(amt>0))throw "Enter the cap cost."; if(!(N>0))throw "Enter the term in months.";
-      if(leaseGoal==="pmt"){ if(!(res>=0))throw "Enter the residual."; var pmt=pmtFor(amt,i,N,res,0); label="Monthly payment"; val=money0(pmt); unit="/month"; window._lsShow(amt,i,N,pmt,res); }
-      else if(leaseGoal==="res"){ if(!(pmtIn>0))throw "Enter the payment."; var fv=amt*Math.pow(1+i,N)-pmtIn*annFV(i,N); res=fv; label="Residual value"; val=money0(res); window._lsShow(amt,i,N,pmtIn,res); }
-      else if(leaseGoal==="rate"){ if(!(pmtIn>0))throw "Enter the payment."; if(!(res>=0))throw "Enter the residual."; var ip=rateForLoan(amt,pmtIn,N,res,0); if(!isFinite(ip))throw "No rate fits these numbers."; i=ip; rate=ip*freq*100; label="Built-in interest rate"; val=rate.toFixed(3)+"%"; window._lsShow(amt,i,N,pmtIn,res); }
-      var s=window._lsSched;
+      var freq=12, amt=num($("#lsAmt").value), capRed=num($("#lsCapRed").value)||0, rate=num($("#lsRate").value),
+          N=Math.round(num($("#lsTerm").value)), res=num($("#lsRes").value), pmtIn=num($("#lsPmt").value), g=leaseG, net=amt-capRed;
+      if(!(amt>0))throw "Enter the capitalized cost.";
+      if(!(N>0))throw "Enter the term in months.";
+      if(!(net>0))throw "Cap cost reduction can't exceed the cap cost.";
+      var i,pmt,label,val,unit="";
+      if(leaseGoal==="pmt"){ if(!(rate>=0))throw "Enter the implicit rate."; if(!(res>=0))throw "Enter the residual."; i=rate/100/freq; pmt=pmtFor(net,i,N,res,g); label="Payment"; val=money0(pmt); unit="/mo"; }
+      else if(leaseGoal==="res"){ if(!(rate>=0))throw "Enter the implicit rate."; if(!(pmtIn>0))throw "Enter the payment."; i=rate/100/freq; pmt=pmtIn; res=net*Math.pow(1+i,N)-pmt*(1+i*g)*annFV(i,N); label="Residual"; val=money0(res); }
+      else { if(!(pmtIn>0))throw "Enter the payment."; if(!(res>=0))throw "Enter the residual."; pmt=pmtIn; var ip=rateForLoan(net,pmt,N,res,g); if(!isFinite(ip))throw "No rate fits — check the payment against the cap cost, residual, and term."; i=ip; rate=ip*freq*100; label="Implicit rate"; val=rate.toFixed(3)+"%"; }
+      var mf=rate/2400, pvPay=Math.abs(i)<1e-12? pmt*N : pmt*(1+i*g)*(1-Math.pow(1+i,-N))/i;
+      var totPay=pmt*N, totI=totPay+res-net, deprec=Math.max(0,net-res);
       var html='<div class="bigresult"><div class="rl">'+label+'</div><div class="rv">'+val+(unit?' <small>'+unit+'</small>':'')+'</div></div>';
-      html+='<div class="summary">Over <b>'+N+' months</b> you pay <b>'+money0(s.totPay)+'</b>, with a <b>'+money0(res)+'</b> residual to buy or return at the end. Total interest: <b class="neg">'+money0(s.totI)+'</b>.</div>';
-      html+='<div class="charts"><div class="chartbox"><h4>Payment breakdown</h4><canvas id="lsDonut"></canvas><div class="legend"><span><i class="dot" style="background:var(--accent)"></i>Depreciation</span><span><i class="dot" style="background:var(--gold)"></i>Interest</span></div></div><div class="chartbox"><h4>Balance to residual</h4><canvas id="lsArea"></canvas></div></div>';
+      html+='<div class="summary"><b>'+N+'</b> payments of <b>'+money0(pmt)+'</b> '+(g===1?'in advance':'in arrears')+', financing <b>'+money0(net)+'</b> to a <b>'+money0(res)+'</b> residual. Implicit rate <b>'+rate.toFixed(3)+'%</b> · money factor <b>'+mf.toFixed(5)+'</b>. Finance charge over the term: <b class="neg">'+money0(totI)+'</b>.</div>';
+      html+='<div class="statgrid">'+statHTML("Implicit rate",rate.toFixed(3)+"%")+statHTML("Money factor",mf.toFixed(5))+statHTML("PV of payments",money0(pvPay))+statHTML("Total of payments",money0(totPay))+statHTML("Finance charge",money0(totI))+statHTML("Residual",money0(res))+'</div>';
+      html+='<div class="charts"><div class="chartbox"><h4>Cost breakdown</h4><canvas id="lsDonut"></canvas><div class="legend"><span><i class="dot" style="background:var(--accent)"></i>Depreciation '+money0(deprec)+'</span><span><i class="dot" style="background:var(--gold)"></i>Finance '+money0(totI)+'</span></div></div><div class="chartbox"><h4>Balance to residual</h4><canvas id="lsArea"></canvas></div></div>';
       $("#leaseResult").innerHTML=html;
-      var deprec=amt-res;
-      drawDonut($("#lsDonut"),[{value:Math.max(0,deprec),color:cssv("--accent")},{value:s.totI,color:cssv("--gold")}], money0(s.totPay), "paid");
-      drawArea($("#lsArea"), s.bals, "end");
-      lastRedraw=function(){ if($("#lsDonut")){drawDonut($("#lsDonut"),[{value:Math.max(0,deprec),color:cssv("--accent")},{value:s.totI,color:cssv("--gold")}],money0(s.totPay),"paid"); drawArea($("#lsArea"),s.bals,"end");} };
+      var bals=leaseCurve(net,i,N,pmt,res,g);
+      drawDonut($("#lsDonut"),[{value:deprec,color:cssv("--accent")},{value:Math.max(0,totI),color:cssv("--gold")}], money0(totPay), "paid");
+      drawArea($("#lsArea"), bals, "end");
+      lastRedraw=function(){ if($("#lsDonut")){drawDonut($("#lsDonut"),[{value:deprec,color:cssv("--accent")},{value:Math.max(0,totI),color:cssv("--gold")}],money0(totPay),"paid"); drawArea($("#lsArea"),bals,"end");} };
     }catch(e){ err.textContent=(typeof e==="string"?e:"Check your inputs."); err.classList.add("show"); $("#leaseResult").innerHTML=""; }
   }
-  window._lsShow=function(pv,i,N,pmt,fv){ var bal=pv,totI=0,totPay=0,bals=[pv]; for(var p=1;p<=N;p++){ var interest=bal*i,prin=pmt-interest; if(p===N){prin=bal-fv;} bal-=prin; totI+=interest; totPay+=pmt; bals.push(Math.max(bal,fv)); } window._lsSched={totI:totI,totPay:totPay,bals:bals}; };
 
   /* ================= INVESTMENT FLOW ================= */
   var invData=[{amt:"-100000",n:"1",label:"Investment"},{amt:"2200",n:"60",label:"Monthly income"}];
@@ -529,6 +550,7 @@
   function segWire(id,cb){ $$("#"+id+" .chip-b").forEach(function(b){b.addEventListener("click",function(){$$("#"+id+" .chip-b").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");cb(b.dataset.v);});}); }
   segWire("loanGoal",function(v){loanGoal=v;loanFields();runLoan();});
   segWire("leaseGoal",function(v){leaseGoal=v;leaseFields();runLease();});
+  segWire("leaseTiming",function(v){leaseG=(v==="adv")?1:0;runLease();});
   $("#lnCalc").addEventListener("click",runLoan);
   $("#lsCalc").addEventListener("click",runLease);
   $("#invAdd").addEventListener("click",function(){syncInv();invData.push({amt:"0",n:"1"});buildInv();});
