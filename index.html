@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Amortable — a time-value-of-money workbench: TVM solver, amortization schedules with variable-rate steps, and cash-flow NPV/IRR with day-count XNPV/XIRR.">
+<meta name="color-scheme" content="light dark">
+<title>Amortable — Time-Value & Amortization Workbench</title>
+<style>
+  :root{
+    --ground:#E8ECF1; --surface:#FFFFFF; --surface-2:#F4F6F9; --inset:#EEF1F5;
+    --ink:#131A24; --muted:#5C6675; --faint:#8B95A3; --line:#DCE2EA; --line-strong:#C6CEDA;
+    --accent:#2B57C4; --accent-ink:#1E3F98; --accent-soft:#E7EDFB;
+    --pos:#0F7A4D; --pos-soft:#E4F3EB; --neg:#B43B2C; --neg-soft:#F8E9E6;
+    --shadow:0 1px 2px rgba(20,30,50,.06), 0 8px 24px -12px rgba(20,30,50,.14);
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code","Roboto Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --r:9px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ground:#0B0F16; --surface:#141B25; --surface-2:#1A2330; --inset:#10171F;
+      --ink:#E7ECF3; --muted:#96A1AF; --faint:#68737F; --line:#26303D; --line-strong:#333F4E;
+      --accent:#6E97F2; --accent-ink:#A6C1F8; --accent-soft:#1B2740;
+      --pos:#40BB8B; --pos-soft:#16281F; --neg:#E5796B; --neg-soft:#2C1A17;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 30px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="light"]{
+    --ground:#E8ECF1; --surface:#FFFFFF; --surface-2:#F4F6F9; --inset:#EEF1F5;
+    --ink:#131A24; --muted:#5C6675; --faint:#8B95A3; --line:#DCE2EA; --line-strong:#C6CEDA;
+    --accent:#2B57C4; --accent-ink:#1E3F98; --accent-soft:#E7EDFB;
+    --pos:#0F7A4D; --pos-soft:#E4F3EB; --neg:#B43B2C; --neg-soft:#F8E9E6;
+    --shadow:0 1px 2px rgba(20,30,50,.06), 0 8px 24px -12px rgba(20,30,50,.14);
+  }
+  :root[data-theme="dark"]{
+    --ground:#0B0F16; --surface:#141B25; --surface-2:#1A2330; --inset:#10171F;
+    --ink:#E7ECF3; --muted:#96A1AF; --faint:#68737F; --line:#26303D; --line-strong:#333F4E;
+    --accent:#6E97F2; --accent-ink:#A6C1F8; --accent-soft:#1B2740;
+    --pos:#40BB8B; --pos-soft:#16281F; --neg:#E5796B; --neg-soft:#2C1A17;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 30px -16px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:64px}
+  .mono{font-family:var(--mono)}
+  h1,h2,h3{margin:0;text-wrap:balance}
+  a{color:var(--accent-ink)}
+  header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--surface) 88%,transparent);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .bar{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:18px}
+  .brand{display:flex;align-items:baseline;gap:10px}
+  .mark{font-family:var(--mono);font-weight:700;font-size:18px;letter-spacing:-.02em;color:var(--ink)}
+  .mark b{color:var(--accent)}
+  .tag{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  .spacer{flex:1}
+  .toggle{font-family:var(--mono);font-size:12px;letter-spacing:.05em;color:var(--muted);
+    background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:7px 12px;cursor:pointer}
+  .toggle:hover{border-color:var(--line-strong);color:var(--ink)}
+  nav{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;gap:2px;overflow-x:auto}
+  .tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;
+    font-family:var(--mono);font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;
+    color:var(--muted);padding:12px 14px;cursor:pointer;white-space:nowrap}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+  main{max-width:1180px;margin:0 auto;padding:24px 20px}
+  .panel{display:none}
+  .panel.active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .grid{display:grid;grid-template-columns:400px 1fr;gap:20px;align-items:start}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+  .card-h{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .card-h h2{font-size:13px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .card-b{padding:18px}
+  .lede{color:var(--muted);font-size:13px;margin:0 0 12px;line-height:1.55}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .field label{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .field .hint{font-size:11.5px;color:var(--faint)}
+  .inp{font-family:var(--mono);font-size:15px;color:var(--ink);background:var(--surface-2);
+    border:1px solid var(--line);border-radius:7px;padding:9px 11px;width:100%;text-align:right}
+  .inp:focus{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent);background:var(--surface)}
+  select.inp{text-align:left;appearance:none;cursor:pointer}
+  input[type=date].inp{text-align:left}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .seg{display:flex;background:var(--inset);border:1px solid var(--line);border-radius:7px;padding:3px;gap:3px}
+  .seg button{flex:1;appearance:none;background:none;border:0;border-radius:5px;padding:7px;cursor:pointer;
+    font-family:var(--mono);font-size:12px;letter-spacing:.03em;color:var(--muted)}
+  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .solvefor{display:flex;flex-direction:column;gap:2px;margin-bottom:14px}
+  .sf-row{display:grid;grid-template-columns:22px 1fr 150px;align-items:center;gap:10px;
+    padding:8px 10px;border:1px solid transparent;border-radius:7px}
+  .sf-row:hover{background:var(--surface-2)}
+  .sf-row.unknown{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+  .sf-row input[type=radio]{accent-color:var(--accent);width:15px;height:15px;margin:0;cursor:pointer}
+  .sf-row .sf-label{display:flex;flex-direction:column}
+  .sf-row .sf-label .k{font-family:var(--mono);font-weight:600;font-size:13px}
+  .sf-row .sf-label .d{font-size:11px;color:var(--faint)}
+  .sf-row .inp{padding:7px 9px;font-size:13.5px}
+  .sf-row.unknown .inp{visibility:hidden}
+  .sf-solved{font-family:var(--mono);font-weight:700;text-align:right;font-size:15px;color:var(--accent)}
+  .btn{font-family:var(--mono);font-size:13px;letter-spacing:.04em;text-transform:uppercase;font-weight:600;
+    background:var(--accent);color:#fff;border:0;border-radius:8px;padding:12px 16px;width:100%;cursor:pointer}
+  .btn:hover{background:var(--accent-ink)}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{border-color:var(--line-strong);background:var(--inset)}
+  .btn.sm{width:auto;padding:8px 12px;font-size:11.5px}
+  .readout{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin-bottom:16px}
+  .readout .rk{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .readout .rv{font-family:var(--mono);font-weight:700;font-size:30px;letter-spacing:-.01em;margin-top:2px}
+  .readout .rv.pos{color:var(--pos)} .readout .rv.neg{color:var(--neg)}
+  .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-bottom:16px}
+  .chip{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:11px 13px}
+  .chip .ck{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+  .chip .cv{font-family:var(--mono);font-weight:600;font-size:17px;margin-top:3px}
+  .chip .cv.pos{color:var(--pos)} .chip .cv.neg{color:var(--neg)}
+  .twrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+  table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+  thead th{position:sticky;top:0;background:var(--surface-2);color:var(--muted);font-weight:600;
+    text-align:right;padding:9px 12px;border-bottom:1px solid var(--line-strong);
+    font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+  thead th:first-child,tbody td:first-child{text-align:center}
+  tbody td{text-align:right;padding:7px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  tbody tr:nth-child(even){background:var(--surface-2)}
+  tbody tr:hover{background:var(--accent-soft)}
+  tbody tr.rate-change td{border-top:1px dashed var(--accent);color:var(--accent-ink)}
+  tfoot td{text-align:right;padding:10px 12px;font-weight:700;border-top:2px solid var(--line-strong);background:var(--surface-2)}
+  .scrollbox{max-height:520px;overflow:auto}
+  /* cash-flow rows */
+  .cfhead,.cfrow{display:grid;grid-template-columns:30px minmax(82px,1fr) 56px minmax(70px,1fr) 30px 22px;gap:7px;align-items:center}
+  .cfhead{font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);padding:0 2px 6px}
+  .cfhead span:nth-child(2),.cfhead span:nth-child(3){text-align:left}
+  .cfrow{margin-bottom:8px}
+  .cfrow .inp{padding:8px 8px;font-size:13px}
+  .cfrow .cf-label{text-align:left}
+  .cfrow .dir{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:7px;
+    width:30px;height:36px;cursor:pointer;font-family:var(--mono);font-weight:700;font-size:15px}
+  .cfrow .dir.in{color:var(--pos);border-color:color-mix(in srgb,var(--pos) 40%,transparent)}
+  .cfrow .dir.out{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 40%,transparent)}
+  .cfrow .unk{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:7px;
+    width:30px;height:36px;cursor:pointer;font-family:var(--mono);font-weight:700;font-size:13px;color:var(--faint)}
+  .cfrow .unk[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .cfrow input:disabled{opacity:.5;font-style:italic}
+  .cfrow .del{appearance:none;border:0;background:none;color:var(--faint);cursor:pointer;font-size:18px;line-height:1}
+  .cfrow .del:hover{color:var(--neg)}
+  /* rate steps */
+  .steprow{display:grid;grid-template-columns:1fr 1fr 24px;gap:8px;align-items:center;margin-bottom:8px}
+  .stephead{display:grid;grid-template-columns:1fr 1fr 24px;gap:8px;font-family:var(--mono);
+    font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);padding:0 2px 6px}
+  .err{background:var(--neg-soft);border:1px solid color-mix(in srgb,var(--neg) 35%,transparent);
+    color:var(--neg);border-radius:8px;padding:11px 14px;font-size:13px;margin-bottom:14px;display:none}
+  .err.show{display:block}
+  .note{font-size:12.5px;color:var(--muted);line-height:1.55}
+  .note code{font-family:var(--mono);background:var(--inset);padding:1px 5px;border-radius:4px;font-size:12px}
+  details.steps{margin-top:6px}
+  details.steps summary{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-ink);cursor:pointer}
+  details.steps .body{font-family:var(--mono);font-size:12px;color:var(--muted);padding:10px 0 2px;line-height:1.7}
+  .empty{color:var(--faint);font-family:var(--mono);font-size:13px;text-align:center;padding:40px 0}
+  .subhead{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  footer{max-width:1180px;margin:8px auto 0;padding:20px;color:var(--faint);font-size:12px;line-height:1.6}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+
+
+<header>
+  <div class="bar">
+    <div class="brand">
+      <span class="mark">Amort<b>able</b></span>
+      <span class="tag">Time-Value Workbench</span>
+    </div>
+    <span class="spacer"></span>
+    <button class="toggle" id="themeBtn" type="button">◑ Theme</button>
+  </div>
+  <nav role="tablist" aria-label="Calculators">
+    <button class="tab" role="tab" aria-selected="true" data-p="tvm">TVM Solver</button>
+    <button class="tab" role="tab" aria-selected="false" data-p="amort">Amortization</button>
+    <button class="tab" role="tab" aria-selected="false" data-p="cash">Cash Flow · NPV · IRR</button>
+    <button class="tab" role="tab" aria-selected="false" data-p="about">Reference</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ TVM ============ -->
+  <section class="panel active" id="tvm">
+    <div class="grid">
+      <div class="card">
+        <div class="card-h"><h2>Solve For</h2></div>
+        <div class="card-b">
+          <p class="lede">Pick the unknown, fill the rest. Cash <b>received</b> is positive, cash <b>paid</b> is negative.</p>
+          <div class="solvefor" id="sfGroup"></div>
+          <div class="row" style="margin-bottom:14px">
+            <div class="field" style="margin:0"><label>Payments / Year</label><input class="inp mono" id="tvmPY" value="12"></div>
+            <div class="field" style="margin:0"><label>Compounding / Year</label><input class="inp mono" id="tvmCY" value="12"></div>
+          </div>
+          <div class="field">
+            <label>Payment Timing</label>
+            <div class="seg" id="tvmMode">
+              <button type="button" data-v="0" aria-pressed="true">End (ordinary)</button>
+              <button type="button" data-v="1" aria-pressed="false">Begin (annuity-due)</button>
+            </div>
+          </div>
+          <button class="btn" id="tvmCalc" type="button">Compute</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Result</h2></div>
+        <div class="card-b">
+          <div class="err" id="tvmErr"></div>
+          <div class="readout"><div class="rk" id="tvmRK">Payment</div><div class="rv mono" id="tvmRV">—</div></div>
+          <div class="chips" id="tvmChips"></div>
+          <details class="steps"><summary>How this was computed</summary><div class="body mono" id="tvmSteps"></div></details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ AMORTIZATION ============ -->
+  <section class="panel" id="amort">
+    <div class="grid">
+      <div class="card">
+        <div class="card-h"><h2>Loan / Lease Terms</h2></div>
+        <div class="card-b">
+          <div class="field"><label>Amount financed</label><input class="inp mono" id="amAmt" value="250,000"></div>
+          <div class="row">
+            <div class="field"><label>Annual rate %</label><input class="inp mono" id="amRate" value="6.5"></div>
+            <div class="field"><label>Term</label><input class="inp mono" id="amTerm" value="30"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Term unit</label>
+              <select class="inp mono" id="amTermUnit"><option value="years">Years</option><option value="months">Months</option><option value="periods">Periods</option></select>
+            </div>
+            <div class="field"><label>Frequency</label>
+              <select class="inp mono" id="amFreq">
+                <option value="12">Monthly</option><option value="26">Bi-weekly</option><option value="24">Semi-monthly</option>
+                <option value="4">Quarterly</option><option value="2">Semi-annual</option><option value="1">Annual</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Balloon / residual</label><input class="inp mono" id="amBalloon" value="0"><span class="hint">Balance remaining at end</span></div>
+            <div class="field"><label>Extra / period</label><input class="inp mono" id="amExtra" value="0"><span class="hint">Added principal each period</span></div>
+          </div>
+          <div class="field"><label>First payment date</label><input class="inp mono" id="amDate" value="2026-11-01" type="date"></div>
+          <div class="field">
+            <label>Payment timing</label>
+            <div class="seg" id="amMode">
+              <button type="button" data-v="0" aria-pressed="true">End</button>
+              <button type="button" data-v="1" aria-pressed="false">Begin</button>
+            </div>
+          </div>
+
+          <div class="subhead">Variable-rate steps <span style="text-transform:none;letter-spacing:0;color:var(--faint)">— ARM-style recast</span></div>
+          <div class="stephead"><span>From payment #</span><span>New annual rate %</span><span></span></div>
+          <div id="stepRows"></div>
+          <button class="btn ghost sm" id="stepAdd" type="button" style="margin-top:2px">+ Add rate change</button>
+          <p class="hint" style="margin:8px 0 0">At each change the payment is re-amortized over the remaining balance and term. Leave empty for a fixed rate.</p>
+
+          <button class="btn" id="amCalc" type="button" style="margin-top:16px">Build Schedule</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Schedule</h2><span class="spacer"></span><button class="btn ghost sm" id="amCsv" type="button">Export CSV</button></div>
+        <div class="card-b">
+          <div class="err" id="amErr"></div>
+          <div class="chips" id="amChips"></div>
+          <div class="twrap scrollbox"><table id="amTable"><thead><tr>
+            <th>#</th><th>Date</th><th>Rate</th><th>Payment</th><th>Interest</th><th>Principal</th><th>Balance</th>
+          </tr></thead><tbody id="amBody"><tr><td colspan="7" class="empty">Enter terms and build the schedule.</td></tr></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CASH FLOW ============ -->
+  <section class="panel" id="cash">
+    <div class="grid">
+      <div class="card">
+        <div class="card-h"><h2>Cash-Flow Events</h2></div>
+        <div class="card-b">
+          <p class="lede">Each row repeats over consecutive periods. Toggle <span class="mono" style="color:var(--pos)">＋</span>/<span class="mono" style="color:var(--neg)">－</span> for direction, and <span class="mono" style="color:var(--accent)">?</span> to mark one amount <b>Unknown</b> — it's solved so the stream's value nets to zero at your rate.</p>
+          <div class="field"><label>Timing basis</label>
+            <div class="seg" id="cfModeSeg">
+              <button type="button" data-v="per" aria-pressed="true">Periodic</button>
+              <button type="button" data-v="dated" aria-pressed="false">Dated (day-count)</button>
+            </div>
+          </div>
+          <div class="cfhead"><span></span><span>Amount</span><span>×N</span><span>Label</span><span>?</span><span></span></div>
+          <div id="cfRows"></div>
+          <button class="btn ghost sm" id="cfAdd" type="button" style="margin-top:2px">+ Add event</button>
+          <div class="field" style="margin-top:16px"><label id="cfRateLbl">Discount rate % — per year</label><input class="inp mono" id="cfRate" value="8"></div>
+          <div id="cfPerBox">
+            <div class="field"><label>Periods / year</label><input class="inp mono" id="cfPY" value="12"></div>
+          </div>
+          <div id="cfDatedBox" style="display:none">
+            <div class="row">
+              <div class="field"><label>Start date</label><input class="inp mono" id="cfStart" type="date" value="2026-11-01"></div>
+              <div class="field"><label>Frequency</label>
+                <select class="inp mono" id="cfFreq"><option value="12">Monthly</option><option value="26">Bi-weekly</option><option value="24">Semi-monthly</option><option value="4">Quarterly</option><option value="2">Semi-annual</option><option value="1">Annual</option></select>
+              </div>
+            </div>
+            <div class="field"><label>Day-count convention</label>
+              <select class="inp mono" id="cfBasis">
+                <option value="act365">Actual/365 (Fixed) — XIRR standard</option>
+                <option value="act360">Actual/360</option>
+                <option value="d3030">30/360 (US / Bond)</option>
+                <option value="actact">Actual/Actual (approx)</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn" id="cfCalc" type="button">Analyze</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Analysis</h2></div>
+        <div class="card-b">
+          <div class="err" id="cfErr"></div>
+          <div class="chips" id="cfChips"></div>
+          <div class="twrap scrollbox"><table id="cfTable"><thead><tr>
+            <th>#</th><th id="cfColT">Period</th><th>Cash flow</th><th>Disc. factor</th><th>Present value</th><th>Cum. PV</th>
+          </tr></thead><tbody id="cfBody"><tr><td colspan="6" class="empty">Add events and analyze.</td></tr></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REFERENCE ============ -->
+  <section class="panel" id="about">
+    <div class="card"><div class="card-b" style="max-width:72ch">
+      <h2 style="font-size:18px;margin-bottom:10px">What Amortable computes</h2>
+      <p class="note" style="margin-bottom:14px">A time-value-of-money workbench in the spirit of professional amortization software. Everything runs in your browser — nothing is sent anywhere.</p>
+      <p class="note" style="margin-bottom:8px"><b style="color:var(--ink)">TVM Solver</b> — the five classic variables <code>N</code>, <code>i%</code>, <code>PV</code>, <code>PMT</code>, <code>FV</code>. Fix any four, solve the fifth. Separate payment / compounding frequencies and begin- or end-of-period timing. Sign convention: money received is positive, money paid is negative.</p>
+      <p class="note" style="margin-bottom:8px"><b style="color:var(--ink)">Amortization</b> — full period-by-period schedule with interest, principal, and running balance; handles balloons / lease residuals, extra principal, any payment frequency, and <b>variable-rate steps</b>: enter rate changes and the payment is re-amortized (ARM-style recast) over the remaining balance and term. Export to CSV.</p>
+      <p class="note" style="margin-bottom:8px"><b style="color:var(--ink)">Cash Flow · NPV · IRR</b> — build an uneven stream from repeated events. Two timing bases: <b>Periodic</b> (evenly spaced) and <b>Dated</b>, which places every flow on a real calendar date and discounts with your choice of <b>day-count convention</b> — Actual/365, Actual/360, 30/360 (US), or Actual/Actual — giving true <code>XNPV</code> and <code>XIRR</code>. Mark any one amount <b>Unknown</b> and it's solved in closed form so the stream nets to zero at your rate — the classic "what payment makes this deal work?" question.</p>
+      <p class="note" style="margin-bottom:14px">Also reported: <code>MIRR</code>, payback period, and the undiscounted net, with per-period present values tabulated.</p>
+      <p class="note">Still on the roadmap: APR / Reg-Z disclosure output, points &amp; fees, and skipped / irregular per-event dates. Ask and I'll add them.</p>
+    </div></div>
+  </section>
+</main>
+
+<footer>Amortable · client-side time-value engine · not affiliated with any commercial product · results are estimates — verify before relying on them for lending or accounting.</footer>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s,r){return (r||document).querySelector(s)};
+  var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+
+  /* ---------- number helpers ---------- */
+  function num(v){ if(typeof v==="number")return v; if(v==null)return NaN;
+    var s=(""+v).replace(/[$,\s%]/g,"").replace(/[()]/g,function(m){return m==="("?"-":""});
+    return s===""?NaN:parseFloat(s); }
+  function money(x){ if(!isFinite(x))return "—"; var n=Math.round(x*100)/100, neg=n<0; n=Math.abs(n);
+    return (neg?"-$":"$")+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function pct(x,d){ if(!isFinite(x))return "—"; return (x*100).toFixed(d==null?4:d)+"%"; }
+  function fmtNum(x,d){ if(!isFinite(x))return "—"; return x.toLocaleString("en-US",{minimumFractionDigits:d==null?2:d,maximumFractionDigits:d==null?4:d}); }
+
+  /* ---------- dates ---------- */
+  function parseDate(s){ if(!s)return null; var p=s.split("-"); return {y:+p[0],m:+p[1],d:+p[2]}; }
+  function addPeriods(d,n,freq){ if(!d)return null;
+    if(freq===26||freq===24){ var base=new Date(Date.UTC(d.y,d.m-1,d.d)); base.setUTCDate(base.getUTCDate()+ (freq===26?n*14:n*15));
+      return {y:base.getUTCFullYear(),m:base.getUTCMonth()+1,d:base.getUTCDate()}; }
+    var monthsPer={12:1,4:3,2:6,1:12}[freq]||1; var mm=(d.m-1)+Math.round(n*monthsPer); var yy=d.y+Math.floor(mm/12); mm=((mm%12)+12)%12;
+    return {y:yy,m:mm+1,d:d.d}; }
+  function fmtDate(d){ if(!d)return "—"; var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return mo[d.m-1]+" "+String(d.d).padStart(2,"0")+" "+d.y; }
+  function days(d0,d1){ return (Date.UTC(d1.y,d1.m-1,d1.d)-Date.UTC(d0.y,d0.m-1,d0.d))/86400000; }
+  function yearFrac(d0,d1,basis){
+    if(basis==="d3030"){ var a=d0.d,b=d1.d; if(a===31)a=30; if(b===31&&a===30)b=30;
+      return (360*(d1.y-d0.y)+30*(d1.m-d0.m)+(b-a))/360; }
+    var dd=days(d0,d1);
+    if(basis==="act360")return dd/360;
+    if(basis==="actact")return dd/365.25;
+    return dd/365; // act365 default
+  }
+
+  /* ---------- TVM core ---------- */
+  function annFV(i,N){ return Math.abs(i)<1e-12 ? N : (Math.pow(1+i,N)-1)/i; }
+  function periodic(iy,PY,CY){ var r=iy/100; if(Math.abs(r)<1e-15)return 0; return Math.pow(1+r/CY, CY/PY)-1; }
+  function iyFrom(i,PY,CY){ return CY*(Math.pow(1+i,PY/CY)-1)*100; }
+  function tvmResidual(i,N,PV,PMT,FV,g){ return PV*Math.pow(1+i,N) + PMT*(1+i*g)*annFV(i,N) + FV; }
+  function solveTVM(unknown,vals){
+    var N=vals.N, iy=vals.iy, PV=vals.PV, PMT=vals.PMT, FV=vals.FV, g=vals.g, PY=vals.PY, CY=vals.CY;
+    var i=periodic(iy,PY,CY), steps=[];
+    steps.push("periodic i = "+ (Math.abs(i)<1e-12?"0":fmtNum(i*100,6)+"%")+"  (from "+fmtNum(iy,4)+"% nominal, "+PY+"/yr pay, "+CY+"/yr comp)");
+    if(unknown==="PMT"){ var f=Math.pow(1+i,N), af=annFV(i,N);
+      if(Math.abs(af*(1+i*g))<1e-12) throw "Payment is indeterminate with these inputs.";
+      steps.push("PMT = −(PV·(1+i)^N + FV) / [(1+i·g)·AF]"); return {value:-(PV*f+FV)/((1+i*g)*af),steps:steps,i:i}; }
+    if(unknown==="PV"){ var f2=Math.pow(1+i,N);
+      steps.push("PV = −(PMT·(1+i·g)·AF + FV) / (1+i)^N"); return {value:-(PMT*(1+i*g)*annFV(i,N)+FV)/f2,steps:steps,i:i}; }
+    if(unknown==="FV"){ var f3=Math.pow(1+i,N);
+      steps.push("FV = −(PV·(1+i)^N + PMT·(1+i·g)·AF)"); return {value:-(PV*f3+PMT*(1+i*g)*annFV(i,N)),steps:steps,i:i}; }
+    if(unknown==="N"){
+      if(Math.abs(i)<1e-12){ var n0=-(PV+FV)/PMT; if(!(n0>0))throw "No positive term — check signs of PV, PMT, FV."; steps.push("i=0 ⇒ N=−(PV+FV)/PMT"); return {value:n0,steps:steps,i:i}; }
+      var k=PMT*(1+i*g)/i, arg=(k-FV)/(PV+k);
+      if(!(arg>0)) throw "No solution for N — a self-amortizing loan needs PV and PMT to have opposite signs.";
+      var n=Math.log(arg)/Math.log(1+i); if(!(n>0)) throw "The term came out non-positive — check inputs.";
+      steps.push("A^N=(k−FV)/(PV+k), k=PMT·(1+i·g)/i ⇒ N=ln(arg)/ln(1+i)"); return {value:n,steps:steps,i:i}; }
+    if(unknown==="iy"){
+      var f=function(ii){return tvmResidual(ii,N,PV,PMT,FV,g)};
+      var prev=-0.9999, fprev=f(prev), step=0.01, x=prev+step, a,b,found=false;
+      while(x<=5.0){ var fx=f(x); if(isFinite(fprev)&&isFinite(fx)&&fprev*fx<0){a=prev;b=x;found=true;break;} prev=x;fprev=fx;x+=step; }
+      if(!found) throw "No interest rate solves this — cash flows must change sign for a rate to exist.";
+      for(var it=0;it<200;it++){ var m=(a+b)/2, fm=f(m); if(Math.abs(fm)<1e-9||(b-a)<1e-12){a=b=m;break;} if(f(a)*fm<0)b=m;else a=m; }
+      var im=(a+b)/2; steps.push("solved periodic i="+fmtNum(im*100,6)+"% by bisection ⇒ nominal "+fmtNum(iyFrom(im,PY,CY),6)+"%");
+      return {value:iyFrom(im,PY,CY),steps:steps,i:im}; }
+  }
+
+  /* ---------- TVM UI ---------- */
+  var TVAR=[{k:"N",label:"N",desc:"Number of payments"},{k:"iy",label:"i %",desc:"Nominal annual rate"},
+    {k:"PV",label:"PV",desc:"Present value / principal"},{k:"PMT",label:"PMT",desc:"Payment per period"},{k:"FV",label:"FV",desc:"Future value / balloon"}];
+  var tvmState={N:"360",iy:"6.5",PV:"250000",PMT:"-1580.17",FV:"0"}, tvmUnknown="PMT", tvmMode=0;
+  function stashInputs(){ TVAR.forEach(function(v){ if(v.k!==tvmUnknown){ var el=$("#tv_"+v.k); if(el)tvmState[v.k]=el.value; } }); }
+  function buildSF(){
+    var g=$("#sfGroup"); g.innerHTML="";
+    TVAR.forEach(function(v){ var row=document.createElement("label"); row.className="sf-row"+(v.k===tvmUnknown?" unknown":"");
+      row.innerHTML='<input type="radio" name="sf" '+(v.k===tvmUnknown?"checked":"")+'>'+
+        '<span class="sf-label"><span class="k">'+v.label+'</span><span class="d">'+v.desc+'</span></span>'+
+        (v.k===tvmUnknown?'<span class="sf-solved" id="solved_'+v.k+'">solve →</span>':'<input class="inp mono" id="tv_'+v.k+'" value="'+tvmState[v.k]+'">');
+      row.querySelector("input[type=radio]").addEventListener("change",function(){ stashInputs(); tvmUnknown=v.k; buildSF(); });
+      g.appendChild(row); });
+  }
+  function readTVM(){ stashInputs();
+    var vals={g:tvmMode, PY:Math.max(1,Math.round(num($("#tvmPY").value))||12), CY:Math.max(1,Math.round(num($("#tvmCY").value))||12)};
+    TVAR.forEach(function(v){ if(v.k!==tvmUnknown) vals[v.k]=num(tvmState[v.k]); }); return vals; }
+  function runTVM(){
+    var err=$("#tvmErr"); err.classList.remove("show");
+    try{ var vals=readTVM();
+      TVAR.forEach(function(v){ if(v.k!==tvmUnknown && !isFinite(vals[v.k])) throw "Enter a number for "+v.label+"."; });
+      if(tvmUnknown!=="N" && !(vals.N>0)) throw "N (number of payments) must be positive.";
+      var r=solveTVM(tvmUnknown,vals);
+      $("#tvmRK").textContent=({N:"Term (N)",iy:"Interest rate",PV:"Present value",PMT:"Payment",FV:"Future value"})[tvmUnknown];
+      var rv=$("#tvmRV"); rv.className="rv mono";
+      var disp = tvmUnknown==="iy"?fmtNum(r.value,4)+"%": tvmUnknown==="N"?fmtNum(r.value,3)+" periods":money(r.value);
+      rv.textContent=disp; if(tvmUnknown!=="N"&&tvmUnknown!=="iy") rv.classList.add(r.value<0?"neg":"pos");
+      var solved=$("#solved_"+tvmUnknown); if(solved) solved.textContent=disp;
+      var full=Object.assign({},vals); full[tvmUnknown]=r.value;
+      var chips=$("#tvmChips"); chips.innerHTML=""; var iEff=Math.pow(1+r.i,full.PY)-1;
+      function chip(k,val,cls){ chips.innerHTML+='<div class="chip"><div class="ck">'+k+'</div><div class="cv mono '+(cls||"")+'">'+val+'</div></div>'; }
+      chip("N",fmtNum(full.N,2),""); chip("Nominal i",fmtNum(tvmUnknown==="iy"?r.value:full.iy,4)+"%","");
+      chip("Effective /yr",pct(iEff,4),""); chip("PV",money(full.PV),full.PV<0?"neg":"pos");
+      chip("PMT",money(full.PMT),full.PMT<0?"neg":"pos"); chip("FV",money(full.FV),full.FV<0?"neg":"pos");
+      if(isFinite(full.PMT)&&isFinite(full.N)){ var tot=full.PMT*full.N; chip("Σ Payments",money(tot),tot<0?"neg":"pos");
+        var interest=-(full.PMT*full.N)-(full.PV+full.FV); chip("Σ Interest",money(interest),interest<0?"neg":"pos"); }
+      $("#tvmSteps").innerHTML=r.steps.join("<br>");
+    }catch(e){ err.textContent=(typeof e==="string"?e:"Could not compute — check inputs."); err.classList.add("show"); }
+  }
+
+  /* ---------- Amortization (with variable-rate steps) ---------- */
+  var amMode=0, amCache=null, amSteps=[]; // steps: {from:int, rate:number}
+  function buildSteps(){ var host=$("#stepRows"); host.innerHTML="";
+    amSteps.forEach(function(s,idx){ var el=document.createElement("div"); el.className="steprow";
+      el.innerHTML='<input class="inp mono st-from" value="'+s.from+'"><input class="inp mono st-rate" value="'+s.rate+'"><button type="button" class="del" title="Remove">×</button>';
+      el.querySelector(".del").addEventListener("click",function(){ syncSteps(); amSteps.splice(idx,1); buildSteps(); });
+      host.appendChild(el); }); }
+  function syncSteps(){ amSteps=$$(".steprow").map(function(r){ return {from:Math.max(2,Math.round(num($(".st-from",r).value))||2), rate:num($(".st-rate",r).value)}; })
+    .filter(function(s){return isFinite(s.rate)}).sort(function(a,b){return a.from-b.from}); }
+  function buildAmort(){
+    var err=$("#amErr"); err.classList.remove("show");
+    try{
+      var amt=num($("#amAmt").value), rate=num($("#amRate").value), term=num($("#amTerm").value);
+      var unit=$("#amTermUnit").value, freq=parseInt($("#amFreq").value,10);
+      var balloon=num($("#amBalloon").value)||0, extra=num($("#amExtra").value)||0, g=amMode, start=parseDate($("#amDate").value);
+      if(!(amt>0)) throw "Amount financed must be greater than zero.";
+      if(!(rate>=0)) throw "Enter an annual rate (0 or more).";
+      if(!(term>0)) throw "Enter a positive term.";
+      var N = unit==="years"?Math.round(term*freq): unit==="months"?Math.round(term/12*freq): Math.round(term);
+      if(N<1) throw "That term rounds to zero payments."; if(N>3600) throw "Over 3,600 payments — reduce term or frequency.";
+      syncSteps();
+      function rateAt(p){ var rr=rate; for(var s=0;s<amSteps.length;s++){ if(p>=amSteps[s].from) rr=amSteps[s].rate; } return rr; }
+      var i=periodic(rate,freq,freq), af=annFV(i,N), f=Math.pow(1+i,N);
+      var pmt = i===0?(amt-balloon)/N : (amt*f-balloon)/((1+i*g)*af);
+      var rows=[], bal=amt, totI=0, totP=0, curRate=rate, lastRecalc=1;
+      for(var p=1;p<=N;p++){
+        var rp=rateAt(p), changed=false;
+        if(rp!==curRate){ // recast payment over remaining term at new rate
+          curRate=rp; var rem=N-p+1, ii=periodic(rp,freq,freq);
+          pmt = ii===0?(bal-balloon)/rem : (bal*Math.pow(1+ii,rem)-balloon)/((1+ii*g)*annFV(ii,rem));
+          i=ii; changed=true;
+        }
+        var interest=bal*i, regPrin=(pmt-interest)+extra;
+        var isLast=(p===N)||(bal-regPrin<=balloon+0.005), prin, pay;
+        if(isLast){ prin=bal-balloon; pay=interest+prin+balloon;
+          rows.push({p:p,date:addPeriods(start,p-1,freq),rate:curRate,pay:pay,interest:interest,prin:prin+balloon,bal:0,ch:changed});
+          totI+=interest; totP+=prin+balloon; break;
+        } else { prin=regPrin; pay=interest+prin; bal-=prin;
+          rows.push({p:p,date:addPeriods(start,p-1,freq),rate:curRate,pay:pay,interest:interest,prin:prin,bal:bal,ch:changed});
+          totI+=interest; totP+=prin; }
+      }
+      amCache={rows:rows,N:N,totI:totI,amt:amt,balloon:balloon,extra:extra,freq:freq,pmt0:(i===0?(amt-balloon)/N:(amt*f-balloon)/((1+periodic(rate,freq,freq)*g)*annFV(periodic(rate,freq,freq),N)))};
+      renderAmort();
+    }catch(e){ $("#amBody").innerHTML='<tr><td colspan="7" class="empty">'+(typeof e==="string"?e:"Check inputs.")+'</td></tr>';
+      $("#amChips").innerHTML=""; err.textContent=(typeof e==="string"?e:"Could not build schedule."); err.classList.add("show"); }
+  }
+  function renderAmort(){ var c=amCache; if(!c)return;
+    var chips=$("#amChips"); chips.innerHTML="";
+    function chip(k,v,cls){ chips.innerHTML+='<div class="chip"><div class="ck">'+k+'</div><div class="cv mono '+(cls||"")+'">'+v+'</div></div>'; }
+    chip(amSteps.length?"Initial payment":"Payment", money(c.rows[0]?c.rows[0].pay:0),"");
+    chip("Payments", c.rows.length+" of "+c.N,"");
+    chip("Total interest", money(c.totI),"neg");
+    chip("Total paid", money(c.totI+c.amt),"");
+    if(c.balloon>0) chip("Balloon", money(c.balloon),"");
+    if(amSteps.length) chip("Rate changes", amSteps.length+"","");
+    var b=$("#amBody"); b.innerHTML=""; var frag=document.createDocumentFragment();
+    c.rows.forEach(function(r){ var tr=document.createElement("tr"); if(r.ch)tr.className="rate-change";
+      tr.innerHTML='<td>'+r.p+'</td><td>'+fmtDate(r.date)+'</td><td>'+fmtNum(r.rate,3)+'%</td><td>'+money(r.pay)+'</td><td>'+money(r.interest)+'</td><td>'+money(r.prin)+'</td><td>'+money(r.bal)+'</td>';
+      frag.appendChild(tr); });
+    b.appendChild(frag);
+    var tf=$("#amTable tfoot"); if(tf)tf.remove();
+    var totPay=c.rows.reduce(function(s,r){return s+r.pay},0), totPrin=c.rows.reduce(function(s,r){return s+r.prin},0);
+    var foot=document.createElement("tfoot");
+    foot.innerHTML='<tr><td>Σ</td><td></td><td></td><td>'+money(totPay)+'</td><td>'+money(c.totI)+'</td><td>'+money(totPrin)+'</td><td></td></tr>';
+    $("#amTable").appendChild(foot);
+  }
+  function amortCSV(){ if(!amCache)return;
+    var lines=["Period,Date,Rate%,Payment,Interest,Principal,Balance"];
+    amCache.rows.forEach(function(r){ lines.push([r.p,fmtDate(r.date),r.rate.toFixed(3),r.pay.toFixed(2),r.interest.toFixed(2),r.prin.toFixed(2),r.bal.toFixed(2)].join(",")); });
+    var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([lines.join("\n")],{type:"text/csv"})); a.download="amortization-schedule.csv"; a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href)},1000); }
+
+  /* ---------- Cash flow (periodic + dated day-count + solve-unknown) ---------- */
+  var cfData=[{amt:"-100000",n:"1",label:"Initial outlay",unk:false},{amt:"2200",n:"60",label:"Monthly return",unk:false}];
+  var cfMode="per";
+  function buildCF(){ var host=$("#cfRows"); host.innerHTML="";
+    cfData.forEach(function(row,idx){ var el=document.createElement("div"); el.className="cfrow";
+      var sign=num(row.amt)<0?"out":"in";
+      el.innerHTML='<button type="button" class="dir '+sign+'">'+(sign==="in"?"＋":"－")+'</button>'+
+        '<input class="inp mono cf-amt" value="'+row.amt+'" '+(row.unk?"disabled":"")+' '+(row.unk?'placeholder="solve"':'')+'>'+
+        '<input class="inp mono cf-n" value="'+row.n+'">'+
+        '<input class="inp mono cf-label" value="'+(row.label||"")+'">'+
+        '<button type="button" class="unk" aria-pressed="'+(row.unk?"true":"false")+'" title="Solve this amount">?</button>'+
+        '<button type="button" class="del" title="Remove">×</button>';
+      var amtEl=el.querySelector(".cf-amt"), dirEl=el.querySelector(".dir"), unkEl=el.querySelector(".unk");
+      function refreshSign(){ var s=num(amtEl.value)<0?"out":"in"; dirEl.className="dir "+s; dirEl.textContent=s==="in"?"＋":"－"; }
+      dirEl.addEventListener("click",function(){ if(amtEl.disabled)return; var v=num(amtEl.value)||0; amtEl.value=(-v).toString(); refreshSign(); });
+      amtEl.addEventListener("input",refreshSign);
+      unkEl.addEventListener("click",function(){ syncCF(); cfData.forEach(function(r,j){ r.unk = (j===idx)? !cfData[idx].unk : false; }); buildCF(); });
+      el.querySelector(".del").addEventListener("click",function(){ syncCF(); cfData.splice(idx,1); if(!cfData.length)cfData.push({amt:"0",n:"1",label:"",unk:false}); buildCF(); });
+      host.appendChild(el); });
+    var anyUnk=cfData.some(function(r){return r.unk});
+    $("#cfRateLbl").textContent = anyUnk ? "Solve at rate % — per year (deal yield)" : "Discount rate % — per year";
+  }
+  function syncCF(){ $$(".cfrow").forEach(function(r,idx){ if(cfData[idx]){ cfData[idx].amt=$(".cf-amt",r).value; cfData[idx].n=$(".cf-n",r).value; cfData[idx].label=$(".cf-label",r).value; } }); }
+  function runCF(){
+    var err=$("#cfErr"); err.classList.remove("show");
+    try{ syncCF();
+      // build flows: each element {amt, evIdx, t}
+      var flows=[], t=0, unkIdx=-1;
+      cfData.forEach(function(ev,ei){ var n=Math.max(1,Math.round(num(ev.n))||1); if(ev.unk)unkIdx=ei;
+        for(var k=0;k<n;k++){ flows.push({amt: ev.unk?0:num(ev.amt), evIdx:ei, t:t, isUnk:ev.unk}); t++; } });
+      if(flows.length<2) throw "Add at least two periods of cash flow.";
+      var annual=num($("#cfRate").value)/100;
+      var dated=cfMode==="dated", basis=$("#cfBasis").value, start=parseDate($("#cfStart").value), freq=parseInt($("#cfFreq").value,10);
+      var PY=Math.max(1,Math.round(num($("#cfPY").value))||12);
+      // discount factor for position t
+      function dfAt(pt){ if(dated){ var dt=addPeriods(start,pt,freq); var yf=yearFrac(start,dt,basis); return Math.pow(1+annual,-yf); }
+        var rp=annual/PY; return Math.pow(1+rp,-pt); }
+      // solve unknown amount so NPV=0 at the given annual rate
+      var solvedAmt=null;
+      if(unkIdx>=0){ var known=0, dsum=0;
+        flows.forEach(function(fl){ var df=dfAt(fl.t); if(fl.evIdx===unkIdx) dsum+=df; else known+=fl.amt*df; });
+        if(Math.abs(dsum)<1e-12) throw "Can't solve the unknown at this rate.";
+        solvedAmt = -known/dsum; flows.forEach(function(fl){ if(fl.evIdx===unkIdx) fl.amt=solvedAmt; });
+      }
+      var series=flows.map(function(f){return f.amt});
+      // NPV
+      var theNPV=0; flows.forEach(function(fl){ theNPV+=fl.amt*dfAt(fl.t); });
+      // IRR / XIRR
+      function npvAt(r){ var s=0; flows.forEach(function(fl){ if(dated){ var dt=addPeriods(start,fl.t,freq); s+=fl.amt*Math.pow(1+r,-yearFrac(start,dt,basis)); } else { var rp=Math.pow(1+r,1/PY)-1; s+=fl.amt*Math.pow(1+rp,-fl.t);} }); return s; }
+      function solveRoot(f){ var a=-0.9999, fa=f(a), step=0.01, x=a+step, b; while(x<=5.0){ var fx=f(x); if(isFinite(fa)&&isFinite(fx)&&fa*fx<0){b=x;break;} a=x;fa=fx;x+=step; }
+        if(b===undefined)return NaN; for(var it=0;it<200;it++){ var m=(a+b)/2, fm=f(m); if(Math.abs(fm)<1e-7||(b-a)<1e-13)return m; if(f(a)*fm<0)b=m;else a=m; } return (a+b)/2; }
+      var theIRR = dated ? solveRoot(npvAt) : (function(){ var rp=solveRoot(function(r){ var s=0; flows.forEach(function(fl){s+=fl.amt*Math.pow(1+r,-fl.t)}); return s;}); return isFinite(rp)?rp*PY:NaN; })();
+      // MIRR (periodic only)
+      var theMIRR=NaN;
+      if(!dated){ var rp=annual/PY, n=flows.length-1, pvNeg=0, fvPos=0;
+        flows.forEach(function(fl){ if(fl.amt<0)pvNeg+=fl.amt/Math.pow(1+rp,fl.t); else fvPos+=fl.amt*Math.pow(1+rp,n-fl.t); });
+        if(pvNeg<0&&fvPos>0){ var mp=Math.pow(fvPos/(-pvNeg),1/n)-1; theMIRR=mp*PY; } }
+      var net=series.reduce(function(s,x){return s+x},0);
+      var cum=0, payback=NaN; for(var q=0;q<series.length;q++){ cum+=series[q]; if(cum>=0){payback=q;break;} }
+      // chips
+      var chips=$("#cfChips"); chips.innerHTML="";
+      function chip(k,v,cls){ chips.innerHTML+='<div class="chip"><div class="ck">'+k+'</div><div class="cv mono '+(cls||"")+'">'+v+'</div></div>'; }
+      if(solvedAmt!==null) chip("Solved amount", money(solvedAmt), solvedAmt<0?"neg":"pos");
+      chip((dated?"XNPV":"NPV")+" @ "+fmtNum(annual*100,2)+"%", money(theNPV), theNPV<0?"neg":"pos");
+      chip((dated?"XIRR":"IRR")+" /yr", isFinite(theIRR)?pct(theIRR,3):"n/a", isFinite(theIRR)&&theIRR<annual?"neg":"pos");
+      chip("MIRR /yr", isFinite(theMIRR)?pct(theMIRR,3):(dated?"—":"n/a"),"");
+      chip("Net (undisc.)", money(net), net<0?"neg":"pos");
+      chip("Payback", isFinite(payback)?(payback+(dated?" pds":" pds")):"never","");
+      // table
+      $("#cfColT").textContent = dated?"Date":"Period";
+      var b=$("#cfBody"); b.innerHTML=""; var frag=document.createDocumentFragment(), cumpv=0;
+      flows.forEach(function(fl){ var df=dfAt(fl.t), pv=fl.amt*df; cumpv+=pv;
+        var when = dated? fmtDate(addPeriods(start,fl.t,freq)) : fl.t;
+        var tr=document.createElement("tr");
+        tr.innerHTML='<td>'+(fl.t+1)+'</td><td>'+when+'</td><td style="color:'+(fl.amt<0?"var(--neg)":"var(--pos)")+'">'+money(fl.amt)+'</td><td>'+fmtNum(df,6)+'</td><td>'+money(pv)+'</td><td>'+money(cumpv)+'</td>';
+        frag.appendChild(tr); });
+      b.appendChild(frag);
+      var tf=$("#cfTable tfoot"); if(tf)tf.remove();
+      var foot=document.createElement("tfoot"); foot.innerHTML='<tr><td>Σ</td><td></td><td>'+money(net)+'</td><td></td><td>'+money(theNPV)+'</td><td></td></tr>';
+      $("#cfTable").appendChild(foot);
+      // write solved amount back into the row for visibility
+      if(solvedAmt!==null){ buildCF(); var rows=$$(".cfrow"); if(rows[unkIdx]){ var ae=$(".cf-amt",rows[unkIdx]); ae.value=solvedAmt.toFixed(2); ae.disabled=false; cfData[unkIdx].unk=false; var s=solvedAmt<0?"out":"in"; var de=$(".dir",rows[unkIdx]); de.className="dir "+s; de.textContent=s==="in"?"＋":"－"; var ue=$(".unk",rows[unkIdx]); ue.setAttribute("aria-pressed","false"); }
+        $("#cfRateLbl").textContent="Discount rate % — per year"; }
+    }catch(e){ $("#cfBody").innerHTML='<tr><td colspan="6" class="empty">'+(typeof e==="string"?e:"Check inputs.")+'</td></tr>';
+      $("#cfChips").innerHTML=""; err.textContent=(typeof e==="string"?e:"Could not analyze."); err.classList.add("show"); }
+  }
+
+  /* ---------- wiring ---------- */
+  function wireSeg(id,cb){ var s=$("#"+id); $$("button",s).forEach(function(btn){ btn.addEventListener("click",function(){
+    $$("button",s).forEach(function(b){b.setAttribute("aria-pressed","false")}); btn.setAttribute("aria-pressed","true"); cb(btn.dataset.v); }); }); }
+  $$(".tab").forEach(function(t){ t.addEventListener("click",function(){
+    $$(".tab").forEach(function(x){x.setAttribute("aria-selected","false")}); t.setAttribute("aria-selected","true");
+    $$(".panel").forEach(function(p){p.classList.remove("active")}); $("#"+t.dataset.p).classList.add("active"); }); });
+  function applyTheme(t){ if(t)document.documentElement.setAttribute("data-theme",t); else document.documentElement.removeAttribute("data-theme"); }
+  $("#themeBtn").addEventListener("click",function(){ var cur=document.documentElement.getAttribute("data-theme");
+    var sysDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
+    applyTheme(!cur?(sysDark?"light":"dark"):(cur==="dark"?"light":"dark")); });
+
+  buildSF();
+  wireSeg("tvmMode",function(v){tvmMode=+v});
+  wireSeg("amMode",function(v){amMode=+v});
+  wireSeg("cfModeSeg",function(v){ cfMode=v; $("#cfPerBox").style.display=v==="per"?"":"none"; $("#cfDatedBox").style.display=v==="dated"?"":"none"; });
+  $("#tvmCalc").addEventListener("click",runTVM);
+  $("#amCalc").addEventListener("click",buildAmort);
+  $("#amCsv").addEventListener("click",amortCSV);
+  $("#stepAdd").addEventListener("click",function(){ syncSteps(); amSteps.push({from:(amSteps.length?amSteps[amSteps.length-1].from+60:61),rate:5}); buildSteps(); });
+  $("#cfAdd").addEventListener("click",function(){ syncCF(); cfData.push({amt:"0",n:"1",label:"",unk:false}); buildCF(); });
+  $("#cfCalc").addEventListener("click",runCF);
+  buildSteps(); buildCF();
+  runTVM(); buildAmort(); runCF();
+})();
+</script>
+
+</body>
+</html>
