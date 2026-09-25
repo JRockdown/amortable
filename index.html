@@ -789,7 +789,7 @@
   function addInvRow(noint){ syncInv();
     var PY=parseInt($("#invPY").value,10)||12, last=invData[invData.length-1], nd="2026-11-01";
     if(last&&last.date){ var d0=parseDate(last.date); if(d0){ var n=Math.max(1,Math.round(num(last.n))||1); nd=isoOf(addByFreq(d0,PY,n)); } }
-    invData.push({sign:1,mag:"0",n:"1",date:nd,desc:noint?"Service":"",code:"",noint:!!noint}); buildInv(); }
+    invData.push({sign:1,mag:"0",n:"1",date:nd,desc:noint?"Service":"",code:noint?"SERV":"",noint:!!noint}); buildInv(); }
   $("#invAdd").addEventListener("click",function(){ addInvRow(false); });
   $("#invAddSvc").addEventListener("click",function(){ addInvRow(true); });
   $("#invRechain").addEventListener("click",rechainDates);
