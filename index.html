@@ -210,7 +210,7 @@
   <section class="view" id="v-invest">
     <div style="max-width:1040px;margin:0 auto">
       <div class="card">
-        <div class="card-h"><h2>Lease Builder</h2><p>Lay out the cash flows of a lease, in date order. Give any line a <b>code</b> (like OEC) and reuse it elsewhere — a residual of <b>0.15 x OEC</b> updates itself. Put <b>X</b> in one or more amounts (or in the rate) and Solve fills it in.</p></div>
+        <div class="card-h"><h2>Lease Builder</h2><p>Lay out the cash flows of a lease, in date order. Give any line a <b>code</b> (like OEC) and reuse it elsewhere — a residual of <b>0.15 x OEC</b> updates itself. Put <b>X</b> in one or more amounts, in the rate, or in a line's <b>×N</b> (to solve the number of payments) and Solve fills it in.</p></div>
         <div class="card-b">
           <div class="lb-controls">
             <label class="lbc">APR <span class="inwrap pct"><input class="inp" id="invRate" value="4"><span class="post">%</span></span> <span class="lbc-sub">nominal /yr · or X → solve</span></label>
@@ -491,23 +491,25 @@
         if(Math.abs((v2-c)-2*k)>1e-6*(1+Math.abs(c))) throw "X can only be used straight-line (like 0.5X), not multiplied by itself.";
         return {c:c,k:k}; });
       var xInFlows=lin.some(function(l){return Math.abs(l.k)>1e-9;});
+      /* #3 solve-for-term: X in a line's ×N solves the number of payments */
+      var termIdx=-1, nUnk=0;
+      invData.forEach(function(r,i){ if(r.kind!=="rate" && isUnk(r.n)){ termIdx=i; nUnk++; } });
+      if(nUnk>1) throw "Only one line's ×N can be X.";
       if(xInFlows && rateUnknown) throw "Leave one unknown — either X in the amounts or X in the rate, not both.";
+      if(termIdx>=0 && (xInFlows||rateUnknown)) throw "Leave one unknown — a count (×N = X), an amount, or the rate.";
+      if(termIdx>=0 && Math.abs(lin[termIdx].k)>1e-9) throw "A line that solves its count (×N = X) needs a numeric amount, not X.";
 
       /* rate-change lines -> variable-rate schedule */
       var rateEv=[];
       invData.forEach(function(r){ if(r.kind!=="rate")return; var d=parseDate(r.date); if(!d)throw "Give the rate-change line a date."; var rv=num(r.mag); if(!isFinite(rv))throw "The rate-change line needs a rate %."; rateEv.push({date:d,rate:rv/100}); });
       var hasRateEv=rateEv.length>0;
       if(hasRateEv && rateUnknown) throw "Enter a starting rate — an IRR can't be solved when the lease steps its rate.";
+      if(termIdx>=0 && !isFinite(baseRate)) throw "Enter a rate to solve the number of payments.";
       if(!rateUnknown && !isFinite(baseRate)) throw "Enter a target rate, or type X to solve the IRR.";
 
-      /* expand rows into dated flows using each line's own periodicity */
-      var ib=[],ni=[];
-      invData.forEach(function(r,i){ if(r.kind==="rate")return; var n=Math.max(1,Math.round(num(r.n))||1), d0=parseDate(r.date);
-        if(!d0) throw "Give \""+(r.desc||("line "+(i+1)))+"\" a date."; var sg=r.sign<0?-1:1, f=+r.freq||12;
-        for(var k=0;k<n;k++){ var fl={date:addByFreq(d0,f,k),c:sg*lin[i].c,k:sg*lin[i].k}; (r.noint?ni:ib).push(fl); } });
-      if(ib.length<2) throw "Add at least two interest-bearing cash flows (money out, then payments in).";
-
-      var ref=null; ib.forEach(function(fl){ if(!ref||daysBetween(fl.date,ref)>0)ref=fl.date; });
+      /* reference date + rate schedule + interest method (needed before we can solve a term) */
+      var ref=null; invData.forEach(function(r){ if(r.kind==="rate")return; var d=parseDate(r.date); if(d && (!ref||daysBetween(d,ref)>0))ref=d; });
+      if(!ref) throw "Give the cash flows dates.";
       function cmp(a,b){ return Date.UTC(a.y,a.m-1,a.d)-Date.UTC(b.y,b.m-1,b.d); }
       var sortedEv=rateEv.slice().sort(function(a,b){return cmp(a.date,b.date);});
       function makeBps(base){ var startRate=base, future=[]; sortedEv.forEach(function(e){ if(cmp(e.date,ref)<=0) startRate=e.rate; else future.push(e); }); return [{date:ref,rate:startRate}].concat(future); }
@@ -521,6 +523,23 @@
         if(flo*fhi>0)return NaN;
         for(var i=0;i<160;i++){ var m=(lo+hi)/2,fm=fn(m); if(!isFinite(fm))return NaN; if(Math.abs(fm)<1e-7||(hi-lo)<1e-10)return m; if(flo*fm<=0)hi=m; else{lo=m;flo=fm;} }
         return (lo+hi)/2; }
+      /* expand rows to flows, with an optional override count for the term row */
+      function expand(termN){ var ibf=[],nif=[];
+        invData.forEach(function(r,i){ if(r.kind==="rate")return; var n=(i===termIdx&&termN!=null?termN:Math.max(1,Math.round(num(r.n))||1)), d0=parseDate(r.date);
+          if(!d0) throw "Give \""+(r.desc||("line "+(i+1)))+"\" a date."; var sg=r.sign<0?-1:1, f=+r.freq||12;
+          for(var k=0;k<n;k++){ var fl={date:addByFreq(d0,f,k),c:sg*lin[i].c,k:sg*lin[i].k}; (r.noint?nif:ibf).push(fl); } });
+        return {ib:ibf,ni:nif}; }
+
+      /* #3 solve the number of term payments so the balance amortizes to ~0 */
+      var solvedN=null;
+      if(termIdx>=0){ var bpsN=makeBps(baseRate), found=null;
+        for(var tN=1;tN<=1200;tN++){ var exN=expand(tN); if(finalBal(exN.ib.map(function(fl){return {date:fl.date,amt:fl.c};}),bpsN)<=1e-6){ found=tN; break; } }
+        if(found==null) throw "That payment never amortizes the balance (within 100 years) — raise the payment or lower the rate.";
+        solvedN=found; }
+
+      /* final expansion with the resolved term count */
+      var _ex=expand(termIdx>=0?solvedN:null), ib=_ex.ib, ni=_ex.ni;
+      if(ib.length<2) throw "Add at least two interest-bearing cash flows (money out, then payments in).";
 
       /* solve the unknown payment X, if any, at the (possibly stepped) APR */
       var solvedX=null;
@@ -537,13 +556,13 @@
       var amortRate=(!hasRateEv && !xInFlows)?effIRR:baseRate, amBps=makeBps(amortRate);
       /* #4 auto-round a solved payment to the cent and reconcile the final payment so the balance closes to $0 */
       var roundAdj=0, adjPay=null, adjIsPay=true;
-      if(solvedX!=null){ var Xr=Math.round(solvedX*100)/100;
-        amFlows=ib.map(function(fl){ return {date:fl.date, amt:fl.c+fl.k*Xr}; });
+      if(solvedX!=null || solvedN!=null){
+        if(solvedX!=null){ var Xr=Math.round(solvedX*100)/100; amFlows=ib.map(function(fl){ return {date:fl.date, amt:fl.c+fl.k*Xr}; }); solvedX=Xr; xv=Xr; }
         var probe=simFn(amFlows,amBps), R=probe.length?probe[probe.length-1].bal:0;
         var maxDate=null; ib.forEach(function(fl){ if(maxDate==null||cmp(fl.date,maxDate)>0)maxDate=fl.date; });
-        var adjIdx=-1; ib.forEach(function(fl,i){ if(cmp(fl.date,maxDate)===0){ if(Math.abs(fl.k)>1e-9){adjIdx=i;adjIsPay=true;} else if(adjIdx<0){adjIdx=i;adjIsPay=false;} } });
+        var adjIdx=-1; ib.forEach(function(fl,i){ if(cmp(fl.date,maxDate)===0){ if(Math.abs(fl.k)>1e-9){adjIdx=i;adjIsPay=true;} else if(adjIdx<0){adjIdx=i;} } });
+        if(solvedN!=null)adjIsPay=true;
         if(adjIdx>=0){ amFlows[adjIdx].amt+=R; roundAdj=R; adjPay=amFlows[adjIdx].amt; }
-        solvedX=Xr; xv=Xr;
       }
       var amRows=simFn(amFlows,amBps);
       var endBal=amRows.length?amRows[amRows.length-1].bal:0;
@@ -551,7 +570,8 @@
       var annual=isFinite(effIRR)?effIRR:(isFinite(baseRate)?baseRate:amortRate);
       var mfactor=annual/24; // money factor = APR / 2400
       var bigL,bigV,bigC;
-      if(solvedX!=null){ bigL="Solve for X"; bigV=money(solvedX); bigC=solvedX<0?"neg":"pos"; }
+      if(solvedN!=null){ bigL="Number of payments"; bigV=solvedN+' <small>payments</small>'; bigC="pos"; }
+      else if(solvedX!=null){ bigL="Solve for X"; bigV=money(solvedX); bigC=solvedX<0?"neg":"pos"; }
       else { bigL=hasRateEv?"Implicit APR · yield":"Implicit rate · APR"; bigV=(annual*100).toFixed(3)+"% <small>/ yr</small>"; bigC="pos"; }
 
       var totInt=amRows.reduce(function(s,r){return s+r.interest;},0);
@@ -571,7 +591,7 @@
       var lb=0; var periods=porder.map(function(key){ var p=pmap[key]; if(p.bal==null)p.bal=lb; else lb=p.bal; p.total=p.cf+p.svc; return p; });
 
       var html='<div class="bigresult"><div class="rl">'+bigL+'</div><div class="rv" style="color:'+(bigC==="neg"?"var(--neg)":"var(--pos)")+'">'+bigV+'</div></div>';
-      html+='<div class="summary">This lease carries an implicit <b>'+(annual*100).toFixed(3)+'% APR</b> (money factor <b>'+mfactor.toFixed(5)+'</b>) over <b>'+termTxt+'</b>. On <b>'+money0(financed)+'</b> financed, the lessee pays <b>'+money0(totIn)+'</b> in total — <b>'+money0(totInt)+'</b> of that is finance charge (interest).'+(simple?' Interest is <b>simple (U.S. Rule)</b> — no compounding of unpaid interest.':'')+(hasSvc?' A further <b>'+money0(svc)+'</b> of non-interest service is billed alongside, for <b>'+money0(totIn+svc)+'</b> all-in.':'')+(solvedX!=null?' Solved payment <b>'+money(solvedX)+'</b>'+(Math.abs(roundAdj)>=0.005?' (final '+(adjIsPay?'payment':'cash flow')+' <b>'+money(adjPay)+'</b> so the balance closes to $0)':'')+'.':'')+(solvedX==null&&Math.abs(endBal)>0.005?' <b class="neg">Ends with an open balance of '+money0(endBal)+'</b> — add a payoff line or adjust a cash flow to clear it.':'')+'</div>';
+      html+='<div class="summary">This lease carries an implicit <b>'+(annual*100).toFixed(3)+'% APR</b> (money factor <b>'+mfactor.toFixed(5)+'</b>) over <b>'+termTxt+'</b>. On <b>'+money0(financed)+'</b> financed, the lessee pays <b>'+money0(totIn)+'</b> in total — <b>'+money0(totInt)+'</b> of that is finance charge (interest).'+(simple?' Interest is <b>simple (U.S. Rule)</b> — no compounding of unpaid interest.':'')+(hasSvc?' A further <b>'+money0(svc)+'</b> of non-interest service is billed alongside, for <b>'+money0(totIn+svc)+'</b> all-in.':'')+(solvedN!=null?' Solved term: <b>'+solvedN+' payments</b>'+(Math.abs(roundAdj)>=0.005?' (final payment <b>'+money(adjPay)+'</b> to close to $0)':'')+'.':(solvedX!=null?' Solved payment <b>'+money(solvedX)+'</b>'+(Math.abs(roundAdj)>=0.005?' (final '+(adjIsPay?'payment':'cash flow')+' <b>'+money(adjPay)+'</b> so the balance closes to $0)':'')+'.':''))+(solvedX==null&&Math.abs(endBal)>0.005?' <b class="neg">Ends with an open balance of '+money0(endBal)+'</b> — add a payoff line or adjust a cash flow to clear it.':'')+'</div>';
       html+='<div class="statgrid">'+statHTML("Implicit APR",(annual*100).toFixed(3)+"%")+statHTML("Money factor",mfactor.toFixed(5))+(solvedX!=null&&financed>0?statHTML("Rate factor",(solvedX/financed).toFixed(5)):"")+statHTML("Term",termMo+" mo")+statHTML("Amount financed",money0(financed))+statHTML("Total payments",money0(totIn))+statHTML("Total interest",money0(totInt))+(hasSvc?statHTML("Service (no int.)",money0(svc)):statHTML("Interest flows",ib.length+""))+'</div>';
       html+='<div class="charts"><div class="chartbox"><h4>'+(hasSvc?"Total each period":"Cash flows")+'</h4><canvas id="invBars"></canvas></div><div class="chartbox"><h4>Cumulative (payback)</h4><canvas id="invArea"></canvas></div></div>';
       var cols=hasSvc?'<th>Date</th><th>Financed</th><th>Interest</th><th>Balance</th><th>Service</th><th>Total pay</th>':'<th>Date</th><th>Cash flow</th><th>Interest</th><th>Balance</th>';
@@ -602,6 +622,7 @@
 
       /* on Solve/Analyze, replace formulas & the unknown with their resolved values */
       if(commit){ invData.forEach(function(r,i){ if(r.kind!=="rate") r.mag=magStr(lin[i].c+lin[i].k*xv); });
+        if(termIdx>=0 && solvedN!=null) invData[termIdx].n=""+solvedN;
         if(rateUnknown) $("#invRate").value=(""+(Math.round(annual*100000)/1000)); buildInv(); }
       setStale(false);
     }catch(e){ err.textContent=(typeof e==="string"?e:"Check your inputs."); err.classList.add("show"); $("#invResult").innerHTML=""; }
