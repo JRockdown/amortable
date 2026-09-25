@@ -512,11 +512,17 @@
         if(flo*fhi>0)return NaN;
         for(var i=0;i<160;i++){ var m=(lo+hi)/2,fm=fn(m); if(!isFinite(fm))return NaN; if(Math.abs(fm)<1e-7||(hi-lo)<1e-10)return m; if(flo*fm<=0)hi=m; else{lo=m;flo=fm;} }
         return (lo+hi)/2; }
-      /* expand rows to flows, with an optional override count for the term row */
+      /* expand rows to flows, with an optional override count for the term row.
+         When solving a term, re-date any interest-bearing "end" flow (e.g. residual) dated after the
+         term's start to the end of the solved term (the last payment's date). */
       function expand(termN){ var ibf=[],nif=[];
-        invData.forEach(function(r,i){ if(r.kind==="rate")return; var n=(i===termIdx&&termN!=null?termN:Math.max(1,Math.round(num(r.n))||1)), d0=parseDate(r.date);
+        var termD=termIdx>=0?parseDate(invData[termIdx].date):null, termF=termIdx>=0?(+invData[termIdx].freq||12):12;
+        var lastPay=(termIdx>=0 && termN!=null && termN>0)?addByFreq(termD,termF,termN-1):null;
+        invData.forEach(function(r,i){ if(r.kind==="rate")return;
+          var n=(i===termIdx&&termN!=null?termN:Math.max(1,Math.round(num(r.n))||1)), d0=parseDate(r.date);
           if(!d0) throw "Give \""+(r.desc||("line "+(i+1)))+"\" a date."; var sg=r.sign<0?-1:1, f=+r.freq||12;
-          for(var k=0;k<n;k++){ var fl={date:addByFreq(d0,f,k),c:sg*lin[i].c,k:sg*lin[i].k}; (r.noint?nif:ibf).push(fl); } });
+          if(lastPay && i!==termIdx && !r.noint && cmp(d0,termD)>0) d0=lastPay;
+          for(var k=0;k<n;k++){ var fl={date:addByFreq(d0,f,k),c:sg*lin[i].c,k:sg*lin[i].k,term:(i===termIdx)}; (r.noint?nif:ibf).push(fl); } });
         return {ib:ibf,ni:nif}; }
 
       /* #3 solve the number of term payments so the balance amortizes to ~0 */
@@ -549,7 +555,7 @@
         if(solvedX!=null){ var Xr=Math.round(solvedX*100)/100; amFlows=ib.map(function(fl){ return {date:fl.date, amt:fl.c+fl.k*Xr}; }); solvedX=Xr; xv=Xr; }
         var probe=simFn(amFlows,amBps), R=probe.length?probe[probe.length-1].bal:0;
         var maxDate=null; ib.forEach(function(fl){ if(maxDate==null||cmp(fl.date,maxDate)>0)maxDate=fl.date; });
-        var adjIdx=-1; ib.forEach(function(fl,i){ if(cmp(fl.date,maxDate)===0){ if(Math.abs(fl.k)>1e-9){adjIdx=i;adjIsPay=true;} else if(adjIdx<0){adjIdx=i;} } });
+        var adjIdx=-1; ib.forEach(function(fl,i){ if(cmp(fl.date,maxDate)===0){ if(Math.abs(fl.k)>1e-9||fl.term){adjIdx=i;adjIsPay=true;} else if(adjIdx<0){adjIdx=i;} } });
         if(solvedN!=null)adjIsPay=true;
         if(adjIdx>=0){ amFlows[adjIdx].amt+=R; roundAdj=R; adjPay=amFlows[adjIdx].amt; }
       }
