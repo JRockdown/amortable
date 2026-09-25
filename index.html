@@ -546,7 +546,7 @@
   var lastRedraw=null;
 
   /* ---- router ---- */
-  function go(v){ $(".view").forEach(function(x){x.classList.remove("active")}); var el=$("#v-"+v); if(el)el.classList.add("active"); window.scrollTo(0,0); if(v==="invest"){buildInv();runInv();} }
+  function go(v){ $$(".view").forEach(function(x){x.classList.remove("active")}); var el=$("#v-"+v); if(el)el.classList.add("active"); window.scrollTo(0,0); if(v==="invest"){buildInv();runInv();} }
   $("#homeBtn").addEventListener("click",function(){go("invest")});
 
   /* wiring */
