@@ -601,14 +601,18 @@
       html+='<div class="statgrid">'+statHTML("Implicit APR",(annual*100).toFixed(3)+"%")+statHTML("Money factor",mfactor.toFixed(5))+(solvedX!=null&&financed>0?statHTML("Rate factor",(solvedX/financed).toFixed(5)):"")+statHTML("Term",termMo+" mo")+statHTML("Amount financed",money0(financed))+statHTML("Total payments",money0(totIn))+statHTML("Total interest",money0(totInt))+(hasSvc?statHTML("Service (no int.)",money0(svc)):statHTML("Interest flows",ib.length+""))+'</div>';
       html+='<div class="charts"><div class="chartbox"><h4>'+(hasSvc?"Total each period":"Cash flows")+'</h4><canvas id="invBars"></canvas></div><div class="chartbox"><h4>Cumulative (payback)</h4><canvas id="invArea"></canvas></div></div>';
       var cols=hasSvc?'<th>Date</th><th>Financed</th><th>Interest</th><th>Balance</th><th>Service</th><th>Total pay</th>':'<th>Date</th><th>Cash flow</th><th>Interest</th><th>Balance</th>';
-      html+='<div class="payoff"><div class="payoff-h">Balance on a date</div><div class="payoff-row"><label>Balance after <select class="inp" id="invPayIdx"></select></label><span class="payoff-val" id="invPayOut">—</span></div><div class="payoff-note">Outstanding financed balance right after that payment — the basis for an early-payoff or buyout quote.</div></div>';
+      html+='<div class="payoff"><div class="payoff-h">Balance on a date</div><div class="payoff-row"><label>As of <input class="inp" type="date" id="invPayDate"></label><span class="payoff-val" id="invPayOut">—</span></div><div class="payoff-note">Outstanding financed balance on that date, grown to the day — the basis for an early-payoff or buyout quote.</div></div>';
       html+='<details class="sched" open><summary>'+(hasSvc?"Payment schedule":"Amortization schedule")+'<span class="tw" id="invCsv">CSV ↓</span></summary><div class="twrap"><table><thead><tr>'+cols+'</tr></thead><tbody id="invAmBody"></tbody></table></div></details>';
       $("#invResult").innerHTML=html;
-      (function(){ var psel=$("#invPayIdx"); if(!psel)return; var idxs=[]; amRows.forEach(function(r,i){ if(!r.isRate)idxs.push(i); });
-        psel.innerHTML=idxs.map(function(i){ return '<option value="'+i+'">'+fmtDate(amRows[i].date)+'</option>'; }).join("");
-        var di=idxs.length?idxs[Math.min(idxs.length-1,Math.max(0,Math.floor(idxs.length/2)))]:0; psel.value=""+di;
-        function showPay(){ var r=amRows[+psel.value]; if(r)$("#invPayOut").textContent=money(Math.max(0,r.bal)); }
-        psel.addEventListener("change",showPay); showPay();
+      (function(){ var di=$("#invPayDate"); if(!di)return;
+        function balanceOn(D){ var fl=amFlows.filter(function(f){return cmp(f.date,D)<=0;}).concat([{date:D,amt:0}]);
+          var bpsD=amBps.filter(function(b){return cmp(b.date,D)<=0;}); if(!bpsD.length)bpsD=[amBps[0]];
+          var rows=simFn(fl,bpsD); return rows.length?rows[rows.length-1].bal:0; }
+        var cfr=[]; amRows.forEach(function(r){ if(!r.isRate)cfr.push(r); });
+        var def=cfr.length?cfr[Math.min(cfr.length-1,Math.max(0,Math.floor(cfr.length/2)))].date:ref;
+        di.value=isoOf(def);
+        function show(){ var D=parseDate(di.value); $("#invPayOut").textContent=D?money(Math.max(0,balanceOn(D))):"—"; }
+        di.addEventListener("change",show); show();
       })();
       function col(v,bold){ return '<td'+(bold?' style="font-weight:600;color:'+(v<0?"var(--neg)":"var(--pos)")+'"':(' style="color:'+(v<0?"var(--neg)":"var(--pos)")+'"'))+'>'+money(v)+'</td>'; }
       var bod=$("#invAmBody"),frag=document.createDocumentFragment();
