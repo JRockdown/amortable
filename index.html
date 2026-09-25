@@ -137,8 +137,8 @@
   .cf-row .del{appearance:none;border:0;background:none;color:var(--faint);cursor:pointer;font-size:18px}
   /* lease-builder — flat, one-line-per-flow spreadsheet feel */
   .cf-scroll{overflow-x:auto;overflow-y:hidden;margin:0 -2px;padding-bottom:2px}
-  .cf-sheet{min-width:830px}
-  .cf-hd,.cf-line{display:grid;grid-template-columns:22px 40px minmax(150px,1.5fr) 78px 138px minmax(116px,1fr) 58px 50px 48px 28px;gap:6px;align-items:center}
+  .cf-sheet{min-width:930px}
+  .cf-hd,.cf-line{display:grid;grid-template-columns:22px 40px minmax(148px,1.5fr) 76px 138px minmax(112px,1fr) 50px 78px 48px 46px 28px;gap:6px;align-items:center}
   .cf-hd{font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);padding:0 0 7px}
   .cf-hd span{padding:0 2px}
   .cf-hd .rt{text-align:center}
@@ -163,8 +163,22 @@
   .cf-tools{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}
   /* lease-builder file bar */
   .lb-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px}
-  .lb-recall{max-width:240px;height:38px;font-size:13px}
+  .lb-recall{flex:1 1 210px;min-width:190px;max-width:360px;height:38px;font-size:13px}
   .lb-btns{display:flex;flex-wrap:wrap;gap:6px}
+  .lb-controls{display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-bottom:12px}
+  .lbc{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--muted)}
+  .lbc .inp{height:34px;font-size:13px}
+  .lbc .inwrap.pct{width:84px}
+  .lbc .inwrap.pct .inp{padding-right:24px}
+  .lbc select{max-width:160px}
+  .lbc-sub{font-weight:400;color:var(--faint);font-size:11.5px}
+  .cf-ratewrap{display:flex;align-items:center;gap:3px}
+  .cf-ratewrap .cf-mag{width:100%}
+  .cf-ratewrap b{color:var(--faint);font-family:var(--mono);font-size:12px}
+  .cf-line .dir.rateb{display:flex;align-items:center;justify-content:center;height:36px;border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);border-radius:8px;color:var(--gold);background:var(--surface-2);font-family:var(--mono);font-weight:700;font-size:15px}
+  .cf-line.ratel{background:color-mix(in srgb,var(--gold) 9%,transparent)}
+  .rc{color:var(--gold);font-family:var(--mono);font-size:11px;font-weight:600}
+  tr.rc-row td{color:var(--muted)}
   .lb-status{font-size:12px;color:var(--muted);margin:-2px 0 12px}
   .lb-status:empty{display:none}
   .lb-status.tpl{color:var(--accent-ink);font-weight:600}
@@ -314,28 +328,20 @@
               <button class="btn ghost sm" id="invReset" type="button">Reset</button>
             </div>
           </div>
+          <div class="lb-controls">
+            <label class="lbc">Rate <span class="inwrap pct"><input class="inp" id="invRate" value="7"><span class="post">%</span></span> <span class="lbc-sub">/yr · or X → IRR</span></label>
+            <label class="lbc">Basis <select class="inp" id="invDay"><option value="act365">Actual/365</option><option value="act360">Actual/360</option><option value="d3030">30/360 US</option><option value="actact">Actual/Actual</option></select></label>
+          </div>
           <div class="lb-status" id="invStatus"></div>
           <div class="err" id="invErr"></div>
           <div id="invRows"></div>
-          <div class="cfhint">Drag the <b>⠿</b> handle or use <b>↑ ↓</b> to reorder, then <b>Re-chain dates</b> to space them by ×N. Money out is red (－), in is green (＋). "1,200 × 36" = 1,200 each period, 36 times. Tick <b>no interest</b> for pass-through fees (e.g. service) billed alongside the financed amount.</div>
+          <div class="cfhint">Set each line's own <b>periodicity</b> in the Per column. Drag <b>⠿</b> or use <b>↑ ↓</b> to reorder, then <b>Re-chain dates</b> to space them by ×N. Money out is red (－), in is green (＋). Tick <b>no interest</b> for pass-through fees (e.g. service). Add a <b>Rate change</b> line (a date + a new rate) for a stepped/floating rate.</div>
           <div class="cf-tools">
             <button class="btn ghost sm" id="invAdd" type="button">+ Cash flow</button>
             <button class="btn ghost sm" id="invAddSvc" type="button">+ Service (no interest)</button>
+            <button class="btn ghost sm" id="invAddRate" type="button">+ Rate change</button>
             <button class="btn ghost sm" id="invRechain" type="button">↻ Re-chain dates</button>
           </div>
-          <div class="two">
-            <div class="field"><label>Target rate <span class="sub">per year — or X → solve IRR</span></label>
-              <div class="inwrap pct"><input class="inp" id="invRate" value="7"><span class="post">%</span></div></div>
-            <div class="field"><label>Periods / year</label>
-              <select class="inp" id="invPY"><option value="12">Monthly</option><option value="4">Quarterly</option><option value="2">Semi-annual</option><option value="1">Yearly</option></select></div>
-          </div>
-          <details class="ctrlbox">
-            <summary>Day-count convention</summary>
-            <div class="cgrid">
-              <div class="field"><label>Interest is accrued on a</label>
-                <select class="inp" id="invDay"><option value="act365">Actual/365 basis</option><option value="act360">Actual/360 basis</option><option value="d3030">30/360 (US) basis</option><option value="actact">Actual/Actual basis</option></select></div>
-            </div>
-          </details>
           <button class="btn" id="invCalc" type="button">Solve / Analyze</button>
         </div>
       </div>
@@ -395,6 +401,18 @@
   function datedAmort(flows,annual,dayb){ var s=flows.slice().sort(function(a,b){return Date.UTC(a.date.y,a.date.m-1,a.date.d)-Date.UTC(b.date.y,b.date.m-1,b.date.d)});
     var rows=[],bal=0,prev=null;
     s.forEach(function(fl){ var interest=0; if(prev){ var yf=yearFrac(prev,fl.date,dayb); interest=bal*(Math.pow(1+annual,yf)-1); bal=bal*Math.pow(1+annual,yf); } bal=bal-fl.amt; rows.push({date:fl.date,cf:fl.amt,interest:interest,bal:bal}); prev=fl.date; });
+    return rows; }
+  /* variable-rate amortization: bps = [{date,rate},…] rate breakpoints (bps[0] is the start rate).
+     Accrues interest at the rate in force over each dated interval; rate-change dates emit their own row. */
+  function datedAmortVar(flows,bps,dayb){ function cmp(a,b){return Date.UTC(a.y,a.m-1,a.d)-Date.UTC(b.y,b.m-1,b.d);}
+    var evs=[]; flows.forEach(function(f){evs.push({date:f.date,t:1,amt:f.amt});});
+    for(var i=1;i<bps.length;i++) evs.push({date:bps[i].date,t:0,rate:bps[i].rate});
+    evs.sort(function(a,b){var c=cmp(a.date,b.date);return c!==0?c:(a.t-b.t);});
+    var cur=bps[0].rate,bal=0,prev=null,rows=[];
+    evs.forEach(function(ev){ var interest=0; if(prev){ var yf=yearFrac(prev,ev.date,dayb); interest=bal*(Math.pow(1+cur,yf)-1); bal=bal*Math.pow(1+cur,yf); }
+      if(ev.t===0){ cur=ev.rate; rows.push({date:ev.date,cf:0,interest:interest,bal:bal,isRate:true,rate:cur}); }
+      else { bal=bal-ev.amt; rows.push({date:ev.date,cf:ev.amt,interest:interest,bal:bal}); }
+      prev=ev.date; });
     return rows; }
   function isoOf(d){ return d.y+"-"+String(d.m).padStart(2,"0")+"-"+String(d.d).padStart(2,"0"); }
 
@@ -588,38 +606,56 @@
 
   /* ================= INVESTMENT FLOW ================= */
   var invData=[
-    {sign:-1, mag:"50000",       n:"1",  date:"2026-11-01", desc:"Original Equipment Cost", code:"OEC", noint:false},
-    {sign:1,  mag:"X",           n:"36", date:"2026-12-01", desc:"Lease payment",           code:"PMT", noint:false},
-    {sign:1,  mag:"0.20 x OEC",  n:"1",  date:"2029-11-01", desc:"Residual",                code:"RES", noint:false}
+    {sign:-1, mag:"50000",       n:"1",  freq:12, date:"2026-11-01", desc:"Original Equipment Cost", code:"OEC", noint:false},
+    {sign:1,  mag:"X",           n:"36", freq:12, date:"2026-12-01", desc:"Lease payment",           code:"PMT", noint:false},
+    {sign:1,  mag:"0.20 x OEC",  n:"1",  freq:12, date:"2029-11-01", desc:"Residual",                code:"RES", noint:false}
   ];
+  var FREQOPTS=[[12,"Monthly"],[4,"Quarterly"],[2,"Semi-annual"],[1,"Annual"]];
+  function freqSel(v){ v=+v||12; return '<select class="inp cf-per">'+FREQOPTS.map(function(o){return '<option value="'+o[0]+'"'+(o[0]===v?" selected":"")+'>'+o[1]+'</option>';}).join("")+'</select>'; }
   var invDrag=null;
   function esc(s){ return (""+(s==null?"":s)).replace(/"/g,"&quot;"); }
   function buildInv(){ var host=$("#invRows");host.innerHTML="";
     var scroll=document.createElement("div");scroll.className="cf-scroll";
     var sheet=document.createElement("div");sheet.className="cf-sheet";
     var hd=document.createElement("div");hd.className="cf-hd";
-    hd.innerHTML='<span></span><span></span><span>Description</span><span>Code</span><span>Date</span><span>Amount</span><span class="rt">×N</span><span class="rt">No int</span><span></span><span></span>';
+    hd.innerHTML='<span></span><span></span><span>Description</span><span>Code</span><span>Date</span><span>Amount</span><span class="rt">×N</span><span>Per</span><span class="rt">No int</span><span></span><span></span>';
     sheet.appendChild(hd);
     invData.forEach(function(row,idx){
-      var el=document.createElement("div");el.className="cf-line"+(row.noint?" noint":"");
-      var sc=row.sign<0?"out":"in";
-      el.innerHTML=
-        '<span class="cf-grip" title="Drag to reorder">⠿</span>'+
-        '<button type="button" class="dir '+sc+'" title="Money in / out">'+(sc==="in"?"＋":"－")+'</button>'+
-        '<input class="inp cf-desc" value="'+esc(row.desc)+'" placeholder="'+(row.sign<0?"Original Equipment Cost":"Lease payment")+'">'+
-        '<input class="inp cf-code" value="'+esc(row.code)+'" placeholder="'+(row.sign<0?"OEC":"CODE")+'" title="Short code — reuse in other lines, e.g. 0.15 x '+esc(row.code||"OEC")+'">'+
-        '<input class="inp cf-date" type="date" value="'+esc(row.date)+'">'+
-        '<input class="inp cf-mag" value="'+esc(row.mag)+'" placeholder="amount / 0.15 x OEC / X">'+
-        '<input class="inp cf-n cf-nb" value="'+esc(row.n)+'">'+
-        '<span class="cf-cint"><input type="checkbox" class="cf-noint-cb"'+(row.noint?" checked":"")+' title="Pass-through, no interest"></span>'+
-        '<span class="cf-move"><button type="button" class="up" title="Move up">↑</button><button type="button" class="dn" title="Move down">↓</button></span>'+
-        '<button type="button" class="del" title="Remove">×</button>';
-      el.querySelector(".dir").addEventListener("click",function(){ syncInv(); invData[idx].sign=invData[idx].sign<0?1:-1; buildInv(); runInv(); });
+      var el=document.createElement("div");
+      if(row.kind==="rate"){
+        el.className="cf-line ratel";
+        el.innerHTML=
+          '<span class="cf-grip" title="Drag to reorder">⠿</span>'+
+          '<span class="dir rateb" title="Rate change">%</span>'+
+          '<input class="inp cf-desc" value="'+esc(row.desc)+'" placeholder="Rate change">'+
+          '<span class="cf-none"></span>'+
+          '<input class="inp cf-date" type="date" value="'+esc(row.date)+'">'+
+          '<span class="cf-ratewrap"><input class="inp cf-mag cf-nb" value="'+esc(row.mag)+'" placeholder="new %"><b>%</b></span>'+
+          '<span class="cf-none"></span><span class="cf-none"></span><span class="cf-none"></span>'+
+          '<span class="cf-move"><button type="button" class="up" title="Move up">↑</button><button type="button" class="dn" title="Move down">↓</button></span>'+
+          '<button type="button" class="del" title="Remove">×</button>';
+      } else {
+        el.className="cf-line"+(row.noint?" noint":"");
+        var sc=row.sign<0?"out":"in";
+        el.innerHTML=
+          '<span class="cf-grip" title="Drag to reorder">⠿</span>'+
+          '<button type="button" class="dir '+sc+'" title="Money in / out">'+(sc==="in"?"＋":"－")+'</button>'+
+          '<input class="inp cf-desc" value="'+esc(row.desc)+'" placeholder="'+(row.sign<0?"Original Equipment Cost":"Lease payment")+'">'+
+          '<input class="inp cf-code" value="'+esc(row.code)+'" placeholder="'+(row.sign<0?"OEC":"CODE")+'" title="Short code — reuse in other lines, e.g. 0.15 x '+esc(row.code||"OEC")+'">'+
+          '<input class="inp cf-date" type="date" value="'+esc(row.date)+'">'+
+          '<input class="inp cf-mag" value="'+esc(row.mag)+'" placeholder="amount / 0.15 x OEC / X">'+
+          '<input class="inp cf-n cf-nb" value="'+esc(row.n)+'">'+
+          freqSel(row.freq)+
+          '<span class="cf-cint"><input type="checkbox" class="cf-noint-cb"'+(row.noint?" checked":"")+' title="Pass-through, no interest"></span>'+
+          '<span class="cf-move"><button type="button" class="up" title="Move up">↑</button><button type="button" class="dn" title="Move down">↓</button></span>'+
+          '<button type="button" class="del" title="Remove">×</button>';
+        el.querySelector(".dir").addEventListener("click",function(){ syncInv(); invData[idx].sign=invData[idx].sign<0?1:-1; buildInv(); runInv(); });
+        el.querySelector(".cf-noint-cb").addEventListener("change",function(){ syncInv(); invData[idx].noint=this.checked; buildInv(); runInv(); });
+      }
       el.querySelector(".up").addEventListener("click",function(){ moveRow(idx,-1); });
       el.querySelector(".dn").addEventListener("click",function(){ moveRow(idx,1); });
-      el.querySelector(".del").addEventListener("click",function(){ syncInv(); invData.splice(idx,1); if(!invData.length)invData.push({sign:-1,mag:"0",n:"1",date:"2026-11-01",desc:"",code:"",noint:false}); buildInv(); runInv(); });
-      el.querySelector(".cf-noint-cb").addEventListener("change",function(){ syncInv(); invData[idx].noint=this.checked; buildInv(); runInv(); });
-      $$("input",el).forEach(function(inp){ if(inp.type!=="checkbox") inp.addEventListener("change",function(){ syncInv(); runInv(); }); });
+      el.querySelector(".del").addEventListener("click",function(){ syncInv(); invData.splice(idx,1); if(!invData.length)invData.push({sign:-1,mag:"0",n:"1",freq:12,date:nextMonthFirst(),desc:"",code:"",noint:false}); buildInv(); runInv(); });
+      $$("input,select",el).forEach(function(inp){ if(inp.type!=="checkbox") inp.addEventListener("change",function(){ syncInv(); runInv(); }); });
       var grip=el.querySelector(".cf-grip");
       grip.addEventListener("mousedown",function(){ el.setAttribute("draggable","true"); });
       el.addEventListener("dragstart",function(e){ invDrag=idx; el.classList.add("drag"); e.dataTransfer.effectAllowed="move"; });
@@ -631,17 +667,17 @@
     });
     scroll.appendChild(sheet); host.appendChild(scroll);
     // template mode: lock structure & timing, keep $ amounts + rate editable
-    ["invAdd","invAddSvc","invRechain"].forEach(function(id){ var b=$("#"+id); if(b)b.disabled=templateLock; });
-    if(templateLock){ $$("#invRows .cf-desc,#invRows .cf-code,#invRows .cf-date,#invRows .cf-n,#invRows .dir,#invRows .up,#invRows .dn,#invRows .del,#invRows .cf-noint-cb").forEach(function(el){ el.disabled=true; });
+    ["invAdd","invAddSvc","invAddRate","invRechain"].forEach(function(id){ var b=$("#"+id); if(b)b.disabled=templateLock; });
+    if(templateLock){ $$("#invRows .cf-desc,#invRows .cf-code,#invRows .cf-date,#invRows .cf-n,#invRows .cf-per,#invRows .dir,#invRows .up,#invRows .dn,#invRows .del,#invRows .cf-noint-cb").forEach(function(el){ el.disabled=true; });
       $$("#invRows .cf-grip").forEach(function(g){ g.style.visibility="hidden"; }); }
     var st=$("#invStatus"); if(st){ st.className="lb-status"+(templateLock?" tpl":""); st.textContent=templateLock?"Template — only $ amounts and the rate are editable; timing & structure are locked":(currentName?("Lease: "+currentName):""); }
   }
   function moveRow(i,dir){ syncInv(); var j=i+dir; if(j<0||j>=invData.length)return; var t=invData[i];invData[i]=invData[j];invData[j]=t; buildInv(); runInv(); }
-  function rechainDates(){ syncInv(); var PY=parseInt($("#invPY").value,10)||12;
-    // chain each group in its own order; group's first line keeps its date as anchor
-    function chain(idxs){ for(var j=1;j<idxs.length;j++){ var pd=parseDate(invData[idxs[j-1]].date); if(!pd)continue; var pn=Math.max(1,Math.round(num(invData[idxs[j-1]].n))||1); invData[idxs[j]].date=isoOf(addByFreq(pd,PY,pn)); } }
-    // service (no-interest) lines run in parallel to the lease, so chain them as their own group
-    var lease=[],svc=[]; invData.forEach(function(r,i){ (r.noint?svc:lease).push(i); });
+  function rechainDates(){ syncInv();
+    // chain each group in its own order using each line's own periodicity; first line keeps its date
+    function chain(idxs){ for(var j=1;j<idxs.length;j++){ var p=invData[idxs[j-1]], pd=parseDate(p.date); if(!pd)continue; var pn=Math.max(1,Math.round(num(p.n))||1), pf=+p.freq||12; invData[idxs[j]].date=isoOf(addByFreq(pd,pf,pn)); } }
+    // service (no-interest) lines run in parallel to the lease; rate-change lines keep their own dates
+    var lease=[],svc=[]; invData.forEach(function(r,i){ if(r.kind==="rate")return; (r.noint?svc:lease).push(i); });
     chain(lease); chain(svc);
     buildInv(); runInv(); }
 
@@ -651,8 +687,8 @@
   function loadStore(k){ try{ return JSON.parse(localStorage.getItem(k)||"{}")||{}; }catch(e){ return {}; } }
   function saveStore(k,o){ try{ localStorage.setItem(k,JSON.stringify(o)); }catch(e){} }
   function nextMonthFirst(){ var d=new Date(),y=d.getFullYear(),nm=d.getMonth()+1; if(nm>11){nm=0;y++;} return y+"-"+String(nm+1).padStart(2,"0")+"-01"; }
-  function snapshot(){ syncInv(); return { invData:JSON.parse(JSON.stringify(invData)), rate:$("#invRate").value, py:$("#invPY").value, day:$("#invDay").value }; }
-  function applySnap(s){ if(!s)return; invData=JSON.parse(JSON.stringify(s.invData||[])); if(s.rate!=null)$("#invRate").value=s.rate; if(s.py)$("#invPY").value=s.py; if(s.day)$("#invDay").value=s.day; }
+  function snapshot(){ syncInv(); return { invData:JSON.parse(JSON.stringify(invData)), rate:$("#invRate").value, day:$("#invDay").value }; }
+  function applySnap(s){ if(!s)return; invData=JSON.parse(JSON.stringify(s.invData||[])); if(s.rate!=null)$("#invRate").value=s.rate; if(s.day)$("#invDay").value=s.day; }
   function refreshRecall(){ var sel=$("#invRecall"); if(!sel)return; var L=loadStore(LS_LEASE),T=loadStore(LS_TPL),html='<option value="">Recall a saved lease…</option>';
     var ln=Object.keys(L).sort(); if(ln.length)html+='<optgroup label="Saved leases">'+ln.map(function(n){return '<option value="L::'+esc(n)+'">'+esc(n)+'</option>';}).join("")+'</optgroup>';
     var tn=Object.keys(T).sort(); if(tn.length)html+='<optgroup label="Templates">'+tn.map(function(n){return '<option value="T::'+esc(n)+'">'+esc(n)+'</option>';}).join("")+'</optgroup>';
@@ -664,28 +700,32 @@
   function doRecall(v){ if(!v)return; var type=v.slice(0,1),name=v.slice(3), store=type==="T"?loadStore(LS_TPL):loadStore(LS_LEASE), e=store[name]; if(!e)return;
     applySnap(e); templateLock=(type==="T"); currentName=(type==="T"?"":name); buildInv(); runInv(false); }
   function defaultDeal(base){ var b=parseDate(base); return [
-    {sign:-1,mag:"50000",n:"1",date:base,desc:"Original Equipment Cost",code:"OEC",noint:false},
-    {sign:1, mag:"X",n:"36",date:isoOf(addByFreq(b,12,1)), desc:"Lease payment",code:"PMT",noint:false},
-    {sign:1, mag:"0.20 x OEC",n:"1",date:isoOf(addByFreq(b,12,36)),desc:"Residual",code:"RES",noint:false}]; }
-  function newLease(){ var base=nextMonthFirst(); invData=[{sign:-1,mag:"0",n:"1",date:base,desc:"Original Equipment Cost",code:"OEC",noint:false}];
+    {sign:-1,mag:"50000",n:"1",freq:12,date:base,desc:"Original Equipment Cost",code:"OEC",noint:false},
+    {sign:1, mag:"X",n:"36",freq:12,date:isoOf(addByFreq(b,12,1)), desc:"Lease payment",code:"PMT",noint:false},
+    {sign:1, mag:"0.20 x OEC",n:"1",freq:12,date:isoOf(addByFreq(b,12,36)),desc:"Residual",code:"RES",noint:false}]; }
+  function newLease(){ var base=nextMonthFirst(); invData=[{sign:-1,mag:"0",n:"1",freq:12,date:base,desc:"Original Equipment Cost",code:"OEC",noint:false}];
     $("#invRate").value="7"; templateLock=false; currentName=""; buildInv(); $("#invErr").classList.remove("show"); $("#invResult").innerHTML=""; }
-  function resetLease(){ var base=nextMonthFirst(); invData=defaultDeal(base); $("#invRate").value="7"; $("#invPY").value="12"; $("#invDay").value="act365"; templateLock=false; currentName=""; buildInv(); runInv(false); }
-  function syncInv(){ $$("#invRows .cf-line").forEach(function(r,i){ if(!invData[i])return;
-    invData[i].desc=$(".cf-desc",r).value; invData[i].code=$(".cf-code",r).value; invData[i].mag=$(".cf-mag",r).value;
-    invData[i].n=$(".cf-n",r).value; invData[i].date=$(".cf-date",r).value; invData[i].noint=$(".cf-noint-cb",r).checked;
-    invData[i].sign=$(".dir",r).classList.contains("out")?-1:1; }); }
+  function resetLease(){ var base=nextMonthFirst(); invData=defaultDeal(base); $("#invRate").value="7"; $("#invDay").value="act365"; templateLock=false; currentName=""; buildInv(); runInv(false); }
+  function syncInv(){ $$("#invRows .cf-line").forEach(function(r,i){ if(!invData[i])return; var q=function(s){return $(s,r);};
+    var d=q(".cf-desc"); if(d)invData[i].desc=d.value;
+    var dt=q(".cf-date"); if(dt)invData[i].date=dt.value;
+    var mg=q(".cf-mag"); if(mg)invData[i].mag=mg.value;
+    if(invData[i].kind==="rate")return;
+    var c=q(".cf-code"); if(c)invData[i].code=c.value;
+    var n=q(".cf-n"); if(n)invData[i].n=n.value;
+    var pe=q(".cf-per"); if(pe)invData[i].freq=+pe.value||12;
+    var ic=q(".cf-noint-cb"); if(ic)invData[i].noint=ic.checked;
+    var dir=q(".dir"); if(dir)invData[i].sign=dir.classList.contains("out")?-1:1; }); }
   function runInv(commit){
     var err=$("#invErr");err.classList.remove("show");
     try{ syncInv();
-      var PY=parseInt($("#invPY").value,10)||12, dayb=$("#invDay").value;
+      var dayb=$("#invDay").value;
       var rateStr=$("#invRate").value, rateUnknown=isUnk(rateStr);
-      var rate=rateUnknown?NaN:num(rateStr)/100;
-      if(!rateUnknown && !isFinite(rate)) throw "Enter a target rate, or type X to solve the IRR.";
+      var baseRate=rateUnknown?NaN:num(rateStr)/100;
 
-      /* map of code -> row index (reserve X) */
+      /* map of code -> row index (reserve X); rate-change lines carry no code */
       var codeMap={};
-      invData.forEach(function(r,i){ var c=(r.code||"").trim().toLowerCase(); if(c && c!=="x") codeMap[c]=i; });
-      /* evaluate a row's magnitude at a given value of the unknown X, resolving codes */
+      invData.forEach(function(r,i){ if(r.kind==="rate")return; var c=(r.code||"").trim().toLowerCase(); if(c && c!=="x") codeMap[c]=i; });
       function rowMag(idx,xVal,stack){
         if(stack.indexOf(idx)>=0) throw "Codes reference each other in a loop.";
         var raw=(invData[idx].mag||"").trim(); if(raw==="") return 0;
@@ -695,46 +735,59 @@
           return rowMag(j,xVal,stack.concat(idx));
         });
       }
-      /* linear form c + k*X for every row (X used straight-line only) */
-      var lin=invData.map(function(r,i){ var c=rowMag(i,0,[]),v1=rowMag(i,1,[]),v2=rowMag(i,2,[]),k=v1-c;
+      /* linear form c + k*X for every line (X straight-line only); rate lines aren't cash flows */
+      var lin=invData.map(function(r,i){ if(r.kind==="rate")return {c:0,k:0}; var c=rowMag(i,0,[]),v1=rowMag(i,1,[]),v2=rowMag(i,2,[]),k=v1-c;
         if(Math.abs((v2-c)-2*k)>1e-6*(1+Math.abs(c))) throw "X can only be used straight-line (like 0.5X), not multiplied by itself.";
         return {c:c,k:k}; });
       var xInFlows=lin.some(function(l){return Math.abs(l.k)>1e-9;});
       if(xInFlows && rateUnknown) throw "Leave one unknown — either X in the amounts or X in the rate, not both.";
 
-      /* expand rows into dated flows, split interest-bearing vs pass-through */
+      /* rate-change lines -> variable-rate schedule */
+      var rateEv=[];
+      invData.forEach(function(r){ if(r.kind!=="rate")return; var d=parseDate(r.date); if(!d)throw "Give the rate-change line a date."; var rv=num(r.mag); if(!isFinite(rv))throw "The rate-change line needs a rate %."; rateEv.push({date:d,rate:rv/100}); });
+      var hasRateEv=rateEv.length>0;
+      if(hasRateEv && rateUnknown) throw "Enter a starting rate — an IRR can't be solved when the lease steps its rate.";
+      if(!rateUnknown && !isFinite(baseRate)) throw "Enter a target rate, or type X to solve the IRR.";
+
+      /* expand rows into dated flows using each line's own periodicity */
       var ib=[],ni=[];
-      invData.forEach(function(r,i){ var n=Math.max(1,Math.round(num(r.n))||1), d0=parseDate(r.date);
-        if(!d0) throw "Give \""+(r.desc||("line "+(i+1)))+"\" a date."; var sg=r.sign<0?-1:1;
-        for(var k=0;k<n;k++){ var fl={date:addByFreq(d0,PY,k),c:sg*lin[i].c,k:sg*lin[i].k}; (r.noint?ni:ib).push(fl); } });
+      invData.forEach(function(r,i){ if(r.kind==="rate")return; var n=Math.max(1,Math.round(num(r.n))||1), d0=parseDate(r.date);
+        if(!d0) throw "Give \""+(r.desc||("line "+(i+1)))+"\" a date."; var sg=r.sign<0?-1:1, f=+r.freq||12;
+        for(var k=0;k<n;k++){ var fl={date:addByFreq(d0,f,k),c:sg*lin[i].c,k:sg*lin[i].k}; (r.noint?ni:ib).push(fl); } });
       if(ib.length<2) throw "Add at least two interest-bearing cash flows (money out, then payments in).";
 
       var ref=null; ib.forEach(function(fl){ if(!ref||daysBetween(fl.date,ref)>0)ref=fl.date; });
-      ib.forEach(function(fl){ fl.yf=yearFrac(ref,fl.date,dayb); });
-      function npv(r,x){ var s=0; ib.forEach(function(fl){ s+=(fl.c+fl.k*x)*Math.pow(1+r,-fl.yf); }); return s; }
-      function solveIRR(){ var a=-0.9999,fa=npv(a,0),step=0.004,x=a+step,b;
-        while(x<=3){var fx=npv(x,0);if(fa*fx<0){b=x;break;}a=x;fa=fx;x+=step;}
-        if(b===undefined)return NaN; for(var it=0;it<240;it++){var m=(a+b)/2,fm=npv(m,0);if(Math.abs(fm)<1e-7||(b-a)<1e-13)return m;if(npv(a,0)*fm<0)b=m;else a=m;} return (a+b)/2; }
+      function cmp(a,b){ return Date.UTC(a.y,a.m-1,a.d)-Date.UTC(b.y,b.m-1,b.d); }
+      var sortedEv=rateEv.slice().sort(function(a,b){return cmp(a.date,b.date);});
+      function makeBps(base){ var startRate=base, future=[]; sortedEv.forEach(function(e){ if(cmp(e.date,ref)<=0) startRate=e.rate; else future.push(e); }); return [{date:ref,rate:startRate}].concat(future); }
+      function growthTo(bps,D){ var g=1; for(var i=0;i<bps.length;i++){ var start=bps[i].date, rate=bps[i].rate, end=(i+1<bps.length)?bps[i+1].date:null; if(cmp(start,D)>=0)break; var segEnd=(end&&cmp(end,D)<0)?end:D; g*=Math.pow(1+rate,yearFrac(start,segEnd,dayb)); if(!(end&&cmp(end,D)<0))break; } return g; }
+      function irrOf(flows){ function f(r){var s=0;flows.forEach(function(fl){s+=fl.amt*Math.pow(1+r,-yearFrac(ref,fl.date,dayb));});return s;}
+        var a=-0.9999,fa=f(a),step=0.004,x=a+step,b; while(x<=3){var fx=f(x);if(fa*fx<0){b=x;break;}a=x;fa=fx;x+=step;}
+        if(b===undefined)return NaN; for(var it=0;it<240;it++){var m=(a+b)/2,fm=f(m);if(Math.abs(fm)<1e-7||(b-a)<1e-13)return m;if(f(a)*fm<0)b=m;else a=m;} return (a+b)/2; }
 
-      var solvedX=null,annual,bigL,bigV,bigC;
-      if(xInFlows){
-        var df=ib.map(function(fl){return Math.pow(1+rate,-fl.yf);}),A=0,B=0;
+      /* solve the unknown payment X, if any, at the (possibly stepped) rate */
+      var solvedX=null;
+      if(xInFlows){ var sb=makeBps(baseRate), df=ib.map(function(fl){return 1/growthTo(sb,fl.date);}),A=0,B=0;
         ib.forEach(function(fl,i){ A+=fl.c*df[i]; B+=fl.k*df[i]; });
         if(Math.abs(B)<1e-12) throw "X doesn't move the result — check where you used it.";
-        solvedX=-A/B; annual=rate; bigL="Solve for X"; bigV=money(solvedX); bigC=solvedX<0?"neg":"pos";
-      } else {
-        annual=solveIRR();
-        if(!isFinite(annual)) throw "No IRR exists — the cash flows must change sign (money out, then in).";
-        bigL="Implicit rate · IRR"; bigV=(annual*100).toFixed(3)+"% <small>/ yr</small>"; bigC="pos";
-      }
-
-      /* numeric interest-bearing flows with X substituted */
+        solvedX=-A/B; }
       var xv=solvedX==null?0:solvedX;
       var amFlows=ib.map(function(fl){ return {date:fl.date,amt:fl.c+fl.k*xv}; });
-      var amRows=datedAmort(amFlows,annual,dayb);
+      var effIRR=irrOf(amFlows);
+      if(!hasRateEv && !xInFlows && !isFinite(effIRR)) throw "No IRR exists — the cash flows must change sign (money out, then in).";
+
+      /* amortize at the given rate schedule; for a pure-IRR solve use the solved rate so it closes to 0 */
+      var amortRate=(!hasRateEv && !xInFlows)?effIRR:baseRate;
+      var amRows=datedAmortVar(amFlows,makeBps(amortRate),dayb);
+
+      var annual=isFinite(effIRR)?effIRR:(isFinite(baseRate)?baseRate:amortRate);
+      var bigL,bigV,bigC;
+      if(solvedX!=null){ bigL="Solve for X"; bigV=money(solvedX); bigC=solvedX<0?"neg":"pos"; }
+      else { bigL=hasRateEv?"Effective rate · IRR":"Implicit rate · IRR"; bigV=(annual*100).toFixed(3)+"% <small>/ yr</small>"; bigC="pos"; }
+
       var totInt=amRows.reduce(function(s,r){return s+r.interest;},0);
       var financed=0,totIn=0; amFlows.forEach(function(fl){ if(fl.amt<0)financed+=-fl.amt; else totIn+=fl.amt; });
-      var sortd=amFlows.slice().sort(function(a,b){return Date.UTC(a.date.y,a.date.m-1,a.date.d)-Date.UTC(b.date.y,b.date.m-1,b.date.d);});
+      var sortd=amFlows.slice().sort(function(a,b){return cmp(a.date,b.date);});
       var termMo=Math.round(yearFrac(sortd[0].date,sortd[sortd.length-1].date,"act365")*12);
       var svc=0; ni.forEach(function(fl){ svc+=(fl.c+fl.k*xv); });
       var hasSvc=ni.length>0;
@@ -743,8 +796,8 @@
       /* merge interest-bearing + service into one schedule, aggregated by date */
       var svcMap={}; ni.forEach(function(fl){ var key=isoOf(fl.date); if(!svcMap[key])svcMap[key]={date:fl.date,amt:0}; svcMap[key].amt+=(fl.c+fl.k*xv); });
       var pmap={},porder=[];
-      amRows.forEach(function(r){ var key=isoOf(r.date); if(!pmap[key]){pmap[key]={date:r.date,cf:0,interest:0,bal:r.bal,svc:0,ib:true};porder.push(key);} pmap[key].cf+=r.cf; pmap[key].interest+=r.interest; pmap[key].bal=r.bal; });
-      Object.keys(svcMap).forEach(function(key){ if(!pmap[key]){pmap[key]={date:svcMap[key].date,cf:0,interest:0,bal:null,svc:0,ib:false};porder.push(key);} pmap[key].svc=svcMap[key].amt; });
+      amRows.forEach(function(r){ var key=isoOf(r.date); if(!pmap[key]){pmap[key]={date:r.date,cf:0,interest:0,bal:r.bal,svc:0,rateChange:null};porder.push(key);} pmap[key].cf+=r.cf; pmap[key].interest+=r.interest; pmap[key].bal=r.bal; if(r.isRate)pmap[key].rateChange=r.rate; });
+      Object.keys(svcMap).forEach(function(key){ if(!pmap[key]){pmap[key]={date:svcMap[key].date,cf:0,interest:0,bal:null,svc:0,rateChange:null};porder.push(key);} pmap[key].svc=svcMap[key].amt; });
       porder.sort();
       var lb=0; var periods=porder.map(function(key){ var p=pmap[key]; if(p.bal==null)p.bal=lb; else lb=p.bal; p.total=p.cf+p.svc; return p; });
 
@@ -757,8 +810,9 @@
       $("#invResult").innerHTML=html;
       function col(v,bold){ return '<td'+(bold?' style="font-weight:600;color:'+(v<0?"var(--neg)":"var(--pos)")+'"':(' style="color:'+(v<0?"var(--neg)":"var(--pos)")+'"'))+'>'+money(v)+'</td>'; }
       var bod=$("#invAmBody"),frag=document.createDocumentFragment();
-      periods.forEach(function(p){ var tr=document.createElement("tr");
-        var s='<td>'+fmtDate(p.date)+'</td>'+col(p.cf)+'<td>'+money(p.interest)+'</td><td>'+money(p.bal)+'</td>';
+      periods.forEach(function(p){ var tr=document.createElement("tr"); if(p.rateChange!=null)tr.className="rc-row";
+        var dc=fmtDate(p.date)+(p.rateChange!=null?' <span class="rc">→ '+(p.rateChange*100).toFixed(3).replace(/\.?0+$/,"")+'%</span>':'');
+        var s='<td>'+dc+'</td>'+col(p.cf)+'<td>'+money(p.interest)+'</td><td>'+money(p.bal)+'</td>';
         if(hasSvc) s+=col(p.svc)+col(p.total,true);
         tr.innerHTML=s; frag.appendChild(tr); });
       bod.appendChild(frag);
@@ -771,7 +825,7 @@
       lastRedraw=function(){ if($("#invBars")){drawFlowBars($("#invBars"),chartS);drawCum($("#invArea"),cum);} };
 
       /* on Solve/Analyze, replace formulas & the unknown with their resolved values */
-      if(commit){ invData.forEach(function(r,i){ r.mag=magStr(lin[i].c+lin[i].k*xv); });
+      if(commit){ invData.forEach(function(r,i){ if(r.kind!=="rate") r.mag=magStr(lin[i].c+lin[i].k*xv); });
         if(rateUnknown) $("#invRate").value=(""+(Math.round(annual*100000)/1000)); buildInv(); }
     }catch(e){ err.textContent=(typeof e==="string"?e:"Check your inputs."); err.classList.add("show"); $("#invResult").innerHTML=""; }
   }
@@ -842,11 +896,16 @@
   $("#lnCalc").addEventListener("click",runLoan);
   $("#lsCalc").addEventListener("click",runLease);
   function addInvRow(noint){ syncInv();
-    var PY=parseInt($("#invPY").value,10)||12, last=invData[invData.length-1], nd="2026-11-01";
-    if(last&&last.date){ var d0=parseDate(last.date); if(d0){ var n=Math.max(1,Math.round(num(last.n))||1); nd=isoOf(addByFreq(d0,PY,n)); } }
-    invData.push({sign:1,mag:"0",n:"1",date:nd,desc:noint?"Service":"",code:noint?"SERV":"",noint:!!noint}); buildInv(); }
+    var last=invData[invData.length-1], nd=nextMonthFirst();
+    if(last&&last.date){ var d0=parseDate(last.date); if(d0){ var n=Math.max(1,Math.round(num(last.n))||1), f=+last.freq||12; nd=isoOf(addByFreq(d0,f,n)); } }
+    invData.push({sign:1,mag:"0",n:"1",freq:(last&&last.freq)||12,date:nd,desc:noint?"Service":"",code:noint?"SERV":"",noint:!!noint}); buildInv(); }
+  function addRateLine(){ syncInv();
+    var last=invData[invData.length-1], nd=nextMonthFirst();
+    if(last&&last.date){ var d0=parseDate(last.date); if(d0){ var n=Math.max(1,Math.round(num(last.n))||1), f=+last.freq||12; nd=isoOf(addByFreq(d0,f,last.kind==="rate"?1:n)); } }
+    invData.push({kind:"rate",mag:($("#invRate")?($("#invRate").value||"7"):"7"),date:nd,desc:"Rate change"}); buildInv(); }
   $("#invAdd").addEventListener("click",function(){ addInvRow(false); });
   $("#invAddSvc").addEventListener("click",function(){ addInvRow(true); });
+  $("#invAddRate").addEventListener("click",addRateLine);
   $("#invRechain").addEventListener("click",rechainDates);
   $("#invSave").addEventListener("click",function(){ doSave(false); });
   $("#invSaveTpl").addEventListener("click",function(){ doSave(true); });
@@ -856,7 +915,6 @@
   refreshRecall();
   $("#invCalc").addEventListener("click",function(){ runInv(true); });
   $("#invDay").addEventListener("change",function(){ runInv(false); });
-  $("#invPY").addEventListener("change",function(){ runInv(false); });
   $("#invRate").addEventListener("change",function(){ runInv(false); });
   $("#invRate").addEventListener("keydown",function(e){ if(e.key==="Enter")runInv(true); });
   $("#tvmCalc").addEventListener("click",runTVM);
