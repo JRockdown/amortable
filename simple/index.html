@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1726">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon-64.png" type="image/png">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Amortable">
 <meta name="description" content="Amortable — the simple, visual way to figure out loan payments, lease rates, and investment returns. Time-value-of-money made easy.">
 <meta name="color-scheme" content="light dark">
 <title>Amortable · Simple — Loans, Leases & Investments, Made Simple</title>
@@ -37,6 +45,8 @@
   a{color:var(--accent-ink)}
   /* header */
   header{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  header{padding-top:env(safe-area-inset-top)}
+  body{padding-bottom:calc(56px + env(safe-area-inset-bottom))}
   .bar{max-width:1080px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:16px}
   .mark{font-family:var(--mono);font-weight:700;font-size:19px;letter-spacing:-.02em;color:var(--ink);cursor:pointer;background:none;border:0;padding:0}
   .mark b{color:var(--accent)}
@@ -790,5 +800,6 @@
   harden();
 })();
 </script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
 </body>
 </html>
