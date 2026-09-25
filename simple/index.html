@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Amortable — the simple, visual way to figure out loan payments, lease rates, and investment returns. Time-value-of-money made easy.">
+<meta name="color-scheme" content="light dark">
+<title>Amortable · Simple — Loans, Leases & Investments, Made Simple</title>
+<style>
+  :root{
+    --ground:#EAEEF3; --surface:#FFFFFF; --surface-2:#F4F6F9; --inset:#EEF1F5;
+    --ink:#131A24; --muted:#5C6675; --faint:#8B95A3; --line:#DCE2EA; --line-strong:#C6CEDA;
+    --accent:#2B57C4; --accent-ink:#1E3F98; --accent-soft:#E7EDFB;
+    --pos:#0F7A4D; --pos-soft:#E4F3EB; --neg:#B43B2C; --neg-soft:#F8E9E6;
+    --gold:#C9832B;
+    --shadow:0 1px 2px rgba(20,30,50,.06), 0 10px 30px -14px rgba(20,30,50,.18);
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code","Roboto Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --r:12px;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --ground:#0B0F16; --surface:#141B25; --surface-2:#1A2330; --inset:#10171F;
+    --ink:#E7ECF3; --muted:#96A1AF; --faint:#68737F; --line:#26303D; --line-strong:#333F4E;
+    --accent:#6E97F2; --accent-ink:#A6C1F8; --accent-soft:#1B2740;
+    --pos:#40BB8B; --pos-soft:#16281F; --neg:#E5796B; --neg-soft:#2C1A17; --gold:#E0A94E;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 34px -18px rgba(0,0,0,.7);
+    color-scheme:dark;
+  }}
+  :root[data-theme="light"]{color-scheme:light;--ground:#EAEEF3;--surface:#FFFFFF;--surface-2:#F4F6F9;--inset:#EEF1F5;--ink:#131A24;--muted:#5C6675;--faint:#8B95A3;--line:#DCE2EA;--line-strong:#C6CEDA;--accent:#2B57C4;--accent-ink:#1E3F98;--accent-soft:#E7EDFB;--pos:#0F7A4D;--pos-soft:#E4F3EB;--neg:#B43B2C;--neg-soft:#F8E9E6;--gold:#C9832B;--shadow:0 1px 2px rgba(20,30,50,.06),0 10px 30px -14px rgba(20,30,50,.18);}
+  :root[data-theme="dark"]{color-scheme:dark;--ground:#0B0F16;--surface:#141B25;--surface-2:#1A2330;--inset:#10171F;--ink:#E7ECF3;--muted:#96A1AF;--faint:#68737F;--line:#26303D;--line-strong:#333F4E;--accent:#6E97F2;--accent-ink:#A6C1F8;--accent-soft:#1B2740;--pos:#40BB8B;--pos-soft:#16281F;--neg:#E5796B;--neg-soft:#2C1A17;--gold:#E0A94E;--shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px -18px rgba(0,0,0,.7);}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-bottom:56px}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  h1,h2,h3{margin:0;text-wrap:balance;letter-spacing:-.01em}
+  a{color:var(--accent-ink)}
+  /* header */
+  header{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .bar{max-width:1080px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:16px}
+  .mark{font-family:var(--mono);font-weight:700;font-size:19px;letter-spacing:-.02em;color:var(--ink);cursor:pointer;background:none;border:0;padding:0}
+  .mark b{color:var(--accent)}
+  .crumb{font-size:13px;color:var(--faint)}
+  .crumb b{color:var(--muted);font-weight:600}
+  .toggle,.ghostlink{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:7px 13px;cursor:pointer}
+  .toggle:hover,.ghostlink:hover{border-color:var(--line-strong);color:var(--ink)}
+  main{max-width:1080px;margin:0 auto;padding:32px 22px}
+  .view{display:none} .view.active{display:block;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important}}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+  .card-h{padding:16px 20px;border-bottom:1px solid var(--line)}
+  .card-h h2{font-size:15px}
+  .card-h p{margin:3px 0 0;color:var(--muted);font-size:13px}
+  .card-b{padding:20px}
+  .goal{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+  .chip-b{appearance:none;font-family:var(--sans);font-size:13px;background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:7px 13px;cursor:pointer;color:var(--muted)}
+  .chip-b[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+  .field label{font-size:13.5px;font-weight:600;color:var(--ink)}
+  .field .sub{font-size:12px;color:var(--faint);font-weight:400}
+  .inwrap{position:relative;display:flex;align-items:center}
+  .inwrap .pre,.inwrap .post{position:absolute;color:var(--faint);font-family:var(--mono);font-size:15px;pointer-events:none}
+  .inwrap .pre{left:12px} .inwrap .post{right:12px}
+  .inp{font-family:var(--mono);font-size:16px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:11px 13px;width:100%;font-variant-numeric:tabular-nums}
+  .inwrap.money .inp{padding-left:26px} .inwrap.pct .inp{padding-right:28px}
+  .inp:focus{outline:2px solid var(--accent);border-color:var(--accent);background:var(--surface)}
+  select.inp{cursor:pointer;font-family:var(--sans);font-size:15px}
+  select.inp option,select.inp optgroup{background:var(--surface);color:var(--ink)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  /* result */
+  .bigresult{background:linear-gradient(180deg,var(--accent-soft),transparent);border:1px solid var(--line);border-radius:var(--r);padding:24px;text-align:center;margin-bottom:18px}
+  .bigresult .rl{font-size:13px;color:var(--muted);font-weight:600}
+  .bigresult .rv{font-family:var(--mono);font-weight:800;font-size:clamp(34px,7vw,52px);letter-spacing:-.02em;color:var(--accent-ink);line-height:1.1;margin:4px 0}
+  .bigresult .rv small{font-size:.42em;font-weight:600;color:var(--muted);letter-spacing:0}
+  .summary{font-size:15.5px;color:var(--ink);line-height:1.6;margin-bottom:20px}
+  .summary b{font-weight:700}
+  .summary .pos{color:var(--pos)} .summary .neg{color:var(--neg)}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+  @media(max-width:560px){.charts{grid-template-columns:1fr}}
+  .chartbox{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+  .chartbox h4{font-size:12px;font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600}
+  canvas{display:block;width:100%}
+  .statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:10px;margin-bottom:18px}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+  .stat .k{font-size:10px;font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+  .stat .v{font-family:var(--mono);font-weight:600;font-size:15px;margin-top:3px}
+  .ctrlbox{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);margin:2px 0 16px;overflow:hidden}
+  .ctrlbox>summary{padding:11px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);list-style:none}
+  .ctrlbox>summary::-webkit-details-marker{display:none}
+  .ctrlbox>summary::before{content:"⚙  "}
+  .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 14px 14px}
+  .cgrid .field{margin-bottom:0}
+  details.sched{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  details.sched summary{padding:14px 18px;cursor:pointer;font-weight:600;font-size:14px;list-style:none;display:flex;align-items:center;gap:8px}
+  details.sched summary::-webkit-details-marker{display:none}
+  details.sched summary .tw{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--accent-ink)}
+  .twrap{overflow-x:auto;border-top:1px solid var(--line);max-height:420px;overflow-y:auto}
+  table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+  thead th{position:sticky;top:0;background:var(--surface-2);color:var(--muted);text-align:right;padding:9px 14px;border-bottom:1px solid var(--line-strong);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase}
+  thead th:first-child,tbody td:first-child{text-align:center}
+  tbody td{text-align:right;padding:7px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+  tbody tr:nth-child(even){background:var(--surface-2)}
+  .btn{font-family:var(--sans);font-size:15px;font-weight:600;background:var(--accent);color:#fff;border:0;border-radius:10px;padding:13px 18px;width:100%;cursor:pointer}
+  .btn:hover{background:var(--accent-ink)} .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:var(--surface-2);color:var(--ink);border:1px solid var(--line);font-weight:500}
+  .btn.ghost:hover{border-color:var(--line-strong)}
+  .btn.sm{width:auto;padding:8px 13px;font-size:13px}
+  .btnrow{display:flex;gap:10px;margin-top:10px}
+  .err{background:var(--neg-soft);border:1px solid color-mix(in srgb,var(--neg) 35%,transparent);color:var(--neg);border-radius:9px;padding:11px 14px;font-size:14px;margin-bottom:14px;display:none}
+  .err.show{display:block}
+  /* lease-builder — flat, one-line-per-flow spreadsheet feel */
+  .cf-scroll{overflow-x:auto;overflow-y:hidden;margin:0 -2px;padding-bottom:2px}
+  .cf-sheet{min-width:912px}
+  .cf-hd,.cf-line{display:grid;grid-template-columns:22px 40px minmax(148px,1.5fr) 76px 138px minmax(112px,1fr) 50px 112px 48px 28px;gap:6px;align-items:center}
+  .cf-hd{font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);padding:0 0 7px}
+  .cf-hd span{padding:0 2px}
+  .cf-hd .rt{text-align:center}
+  .cf-line{padding:4px 0}
+  .cf-line+.cf-line{border-top:1px solid var(--line)}
+  .cf-line.over{box-shadow:inset 0 0 0 2px var(--accent);border-radius:8px}
+  .cf-line.drag{opacity:.4}
+  .cf-line.noint{background:color-mix(in srgb,var(--surface-2) 55%,transparent)}
+  .cf-line .inp{padding:7px 8px;font-size:13px;height:36px}
+  .cf-line .dir{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;height:36px;cursor:pointer;font-family:var(--mono);font-weight:700;font-size:15px}
+  .cf-line .dir.in{color:var(--pos);border-color:color-mix(in srgb,var(--pos) 40%,transparent)}
+  .cf-line .dir.out{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 40%,transparent)}
+  .cf-grip{cursor:grab;color:var(--faint);font-size:15px;text-align:center;user-select:none;line-height:36px}
+  .cf-code{text-transform:uppercase;font-family:var(--mono)!important;font-size:12px!important;letter-spacing:.03em}
+  .cf-nb{text-align:center;font-variant-numeric:tabular-nums}
+  .cf-cint{display:flex;align-items:center;justify-content:center;height:36px}
+  .cf-cint input{accent-color:var(--accent);width:16px;height:16px;margin:0;cursor:pointer}
+  .cf-line .del{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:6px;color:var(--muted);cursor:pointer;width:26px;height:32px;font-size:15px;padding:0;line-height:1}
+  .cf-line .del:hover{color:var(--ink);border-color:var(--muted)}
+  .cf-tools{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}
+  /* header file controls */
+  .topfile{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+  .topfile .btn.sm{padding:7px 10px}
+  .lb-recall{height:34px;font-size:13px;padding:6px 8px;line-height:1.2;width:168px;min-width:148px}
+  .lb-btns{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .lb-sep{width:1px;align-self:stretch;background:var(--line);margin:2px 3px}
+  .lb-controls{display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-bottom:12px}
+  .lbc{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--muted)}
+  .lbc .inp{height:34px;font-size:13px;padding:6px 10px;line-height:1.2}
+  .lbc .inwrap.pct{width:84px}
+  .lbc .inwrap.pct .inp{padding-right:24px}
+  .lbc select{max-width:190px}
+  .lbc-sub{font-weight:400;color:var(--faint);font-size:11.5px}
+  .cf-ratewrap{display:flex;align-items:center;gap:3px}
+  .cf-ratewrap .cf-mag{width:100%}
+  .cf-ratewrap b{color:var(--faint);font-family:var(--mono);font-size:12px}
+  .cf-line .dir.rateb{display:flex;align-items:center;justify-content:center;height:36px;border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);border-radius:8px;color:var(--gold);background:var(--surface-2);font-family:var(--mono);font-weight:700;font-size:15px}
+  .cf-line.ratel{background:color-mix(in srgb,var(--gold) 9%,transparent)}
+  /* inflow / outflow tint (rate-change rows keep the neutral gold tint) */
+  .cf-line.inrow{background:color-mix(in srgb,var(--pos) 11%,transparent)}
+  .cf-line.outrow{background:color-mix(in srgb,var(--neg) 11%,transparent)}
+  .rc{color:var(--gold);font-family:var(--mono);font-size:11px;font-weight:600}
+  tr.rc-row td{color:var(--muted)}
+  .lb-status{font-size:12px;color:var(--muted);margin:-2px 0 12px}
+  .lb-status:empty{display:none}
+  .lb-status.tpl{color:var(--accent-ink);font-weight:600}
+  .lb-status.tpl::before{content:"🔒 "}
+  .lb-warn{display:flex;flex-direction:column;gap:6px;margin:0 0 14px}
+  .lb-warn:empty{display:none}
+  .warn-item{background:color-mix(in srgb,var(--gold) 13%,transparent);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);color:var(--ink);border-radius:8px;padding:8px 11px;font-size:12.5px;line-height:1.45}
+  .warn-item::before{content:"⚠  ";color:var(--gold);font-weight:700}
+  .lb-recalc{display:none;align-items:center;gap:8px;background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px dashed color-mix(in srgb,var(--accent) 50%,transparent);color:var(--accent-ink);border-radius:9px;padding:9px 13px;font-size:13px;margin-bottom:12px}
+  .lb-recalc.show{display:flex}
+  #invResult.stale{opacity:.4;filter:saturate(.55);transition:opacity .15s ease}
+  #invCalc.needs{animation:pulse 1.7s ease-out infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .cf-line .inp:disabled,.cf-line .dir:disabled,.cf-line button:disabled{opacity:.5;cursor:not-allowed;background:var(--surface-2)}
+  .cfhint{font-size:11px;color:var(--faint);margin:-4px 2px 10px}
+  footer{max-width:1080px;margin:10px auto 0;padding:22px;color:var(--faint);font-size:12.5px;line-height:1.6}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <button class="mark" id="homeBtn" type="button">Amort<b>able</b></button>
+    <span style="font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:8px;letter-spacing:.05em;align-self:center">simple</span>
+    <div class="topfile">
+      <button class="btn ghost sm" id="invNew" type="button">New</button>
+      <button class="btn ghost sm" id="invReset" type="button">Reset</button>
+    </div>
+    <button class="toggle" id="themeBtn" type="button">◑</button>
+  </div>
+</header>
+
+<main>
+  <!-- ===== INVESTMENT ===== -->
+  <section class="view" id="v-invest">
+    <div style="max-width:1040px;margin:0 auto">
+      <div class="card">
+        <div class="card-h"><h2>Lease Builder</h2><p>Lay out the cash flows of a lease, in date order. Give any line a <b>code</b> (like OEC) and reuse it elsewhere — a residual of <b>0.15 x OEC</b> updates itself. Put <b>X</b> in one or more amounts (or in the rate) and Solve fills it in.</p></div>
+        <div class="card-b">
+          <div class="lb-controls">
+            <label class="lbc">APR <span class="inwrap pct"><input class="inp" id="invRate" value="7"><span class="post">%</span></span> <span class="lbc-sub">nominal /yr · or X → solve</span></label>
+            <label class="lbc">Basis <select class="inp" id="invDay"><option value="act365">Actual/365</option><option value="act360">Actual/360</option><option value="d3030">30/360 US</option><option value="actact">Actual/Actual</option></select></label>
+          </div>
+          <div class="lb-status" id="invStatus"></div>
+          <div class="err" id="invErr"></div>
+          <div id="invRows"></div>
+          <div class="lb-warn" id="invWarn"></div>
+          <div class="cfhint">Set each line's own <b>periodicity</b> in the Per column. Drag the <b>⠿</b> handle to reorder, then <b>Re-chain dates</b> to space them by ×N. Money out is red (－), in is green (＋). Tick <b>no interest</b> for pass-through fees (e.g. service). Add a <b>Rate change</b> line (a date + a new rate) for a stepped/floating rate.</div>
+          <div class="cf-tools">
+            <button class="btn ghost sm" id="invAdd" type="button">+ Cash flow</button>
+            <button class="btn ghost sm" id="invAddSvc" type="button">+ Service (no interest)</button>
+            <button class="btn ghost sm" id="invAddRate" type="button">+ Rate change</button>
+            <button class="btn ghost sm" id="invRechain" type="button">↻ Re-chain dates</button>
+          </div>
+          <div class="lb-recalc" id="invRecalcFlag">↻ Inputs changed — click <b>Solve / Analyze</b> to refresh the results.</div>
+          <button class="btn" id="invCalc" type="button">Solve / Analyze</button>
+        </div>
+      </div>
+      <div id="invResult" style="margin-top:20px"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>Amortable · a client-side time-value engine · not affiliated with any commercial product · results are estimates — verify before relying on them for lending or accounting.</footer>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s,r){return (r||document).querySelector(s)},$$=function(s,r){return [].slice.call((r||document).querySelectorAll(s))};
+  function num(v){ if(typeof v==="number")return v; if(v==null)return NaN; var s=(""+v).replace(/[$,\s%]/g,""); return s===""?NaN:parseFloat(s); }
+  function isUnk(s){ return /^(x|u|\?|unknown)$/i.test((""+(s==null?"":s)).trim()); }
+  function money(x){ if(!isFinite(x))return "—"; var n=Math.round(x*100)/100,neg=n<0;n=Math.abs(n); return (neg?"-$":"$")+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function money0(x){ if(!isFinite(x))return "—"; return (x<0?"-$":"$")+Math.abs(Math.round(x)).toLocaleString("en-US"); }
+  function magStr(v){ if(!isFinite(v))return "0"; return ""+(Math.round(v*100)/100); }
+  function pct(x,d){ if(!isFinite(x))return "—"; return (x*100).toFixed(d==null?3:d)+"%"; }
+  function cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  /* ---- dates & day-count ---- */
+  function parseDate(s){ if(!s)return null; var p=(""+s).split("-"); if(p.length!==3)return null; var d={y:+p[0],m:+p[1],d:+p[2]}; return (d.y&&d.m&&d.d)?d:null; }
+  function addByFreq(d,freq,k){ if(!d)return null;
+    if(freq===26||freq===24){ var b=new Date(Date.UTC(d.y,d.m-1,d.d)); b.setUTCDate(b.getUTCDate()+(freq===26?k*14:k*15)); return {y:b.getUTCFullYear(),m:b.getUTCMonth()+1,d:b.getUTCDate()}; }
+    var mp={12:1,4:3,2:6,1:12}[freq]||1, mm=(d.m-1)+k*mp, yy=d.y+Math.floor(mm/12); mm=((mm%12)+12)%12; return {y:yy,m:mm+1,d:d.d}; }
+  function fmtDate(d){ if(!d)return "—"; var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return mo[d.m-1]+" "+String(d.d).padStart(2,"0")+" "+d.y; }
+  function daysBetween(d0,d1){ return (Date.UTC(d1.y,d1.m-1,d1.d)-Date.UTC(d0.y,d0.m-1,d0.d))/86400000; }
+  function yearFrac(d0,d1,basis){ if(basis==="d3030"){ var a=d0.d,b=d1.d; if(a===31)a=30; if(b===31&&a===30)b=30; return (360*(d1.y-d0.y)+30*(d1.m-d0.m)+(b-a))/360; }
+    var dd=daysBetween(d0,d1); if(basis==="act360")return dd/360; if(basis==="actact")return dd/365.25; return dd/365; }
+  /* variable-rate amortization: bps = [{date,rate},…] rate breakpoints (bps[0] is the start rate).
+     Accrues interest at the rate in force over each dated interval; rate-change dates emit their own row. */
+  function datedAmortVar(flows,bps,dayb){ function cmp(a,b){return Date.UTC(a.y,a.m-1,a.d)-Date.UTC(b.y,b.m-1,b.d);}
+    var evs=[]; flows.forEach(function(f){evs.push({date:f.date,t:1,amt:f.amt});});
+    for(var i=1;i<bps.length;i++) evs.push({date:bps[i].date,t:0,rate:bps[i].rate});
+    evs.sort(function(a,b){var c=cmp(a.date,b.date);return c!==0?c:(a.t-b.t);});
+    var cur=bps[0].rate,bal=0,prev=null,rows=[];
+    evs.forEach(function(ev){ var interest=0; if(prev){ var yf=yearFrac(prev,ev.date,dayb); interest=bal*cur*yf; bal=bal+interest; }
+      if(ev.t===0){ cur=ev.rate; rows.push({date:ev.date,cf:0,interest:interest,bal:bal,isRate:true,rate:cur}); }
+      else { bal=bal-ev.amt; rows.push({date:ev.date,cf:ev.amt,interest:interest,bal:bal}); }
+      prev=ev.date; });
+    return rows; }
+  function isoOf(d){ return d.y+"-"+String(d.m).padStart(2,"0")+"-"+String(d.d).padStart(2,"0"); }
+
+  /* ---- amount expression engine: numbers, codes (OEC), the unknown X, + - * / ( ) ----
+     x/X is the unknown when it sits in an operand slot ("0.5X", "X"); it's a multiply
+     operator when another operand follows it ("0.15 x OEC"). Values are magnitudes. */
+  function tokenizeAmt(s){ s=""+s; var i=0,toks=[];
+    function dig(c){return c>="0"&&c<="9";} function alpha(c){return (c>="a"&&c<="z")||(c>="A"&&c<="Z")||c==="_";}
+    while(i<s.length){ var c=s[i];
+      if(c===" "||c==="\t"||c===","||c==="$"){i++;continue;}
+      if(dig(c)||c==="."){ var j=i+1; while(j<s.length&&(dig(s[j])||s[j]==="."))j++; toks.push({t:"num",v:parseFloat(s.slice(i,j))}); i=j; continue; }
+      if(c==="("){toks.push({t:"lp"});i++;continue;}
+      if(c===")"){toks.push({t:"rp"});i++;continue;}
+      if(c==="+"||c==="-"){toks.push({t:"op",v:c});i++;continue;}
+      if(c==="*"||c==="×"||c==="·"||c==="/"){toks.push({t:"op",v:c==="/"?"/":"*"});i++;continue;}
+      if(alpha(c)){ var j2=i+1; while(j2<s.length&&(alpha(s[j2])||dig(s[j2])))j2++; toks.push({t:"id",v:s.slice(i,j2)}); i=j2; continue; }
+      throw "Can't read \""+c+"\" in an amount.";
+    } return toks; }
+  function normalizeAmt(toks){ var out=[],k;
+    for(k=0;k<toks.length;k++){ var tk=toks[k];
+      if(tk.t==="id"&&(tk.v==="x"||tk.v==="X")){ var nx=toks[k+1], operand=nx&&(nx.t==="num"||nx.t==="id"||nx.t==="lp");
+        out.push(operand?{t:"op",v:"*"}:{t:"unk"}); }
+      else out.push(tk); }
+    var res=[];
+    for(k=0;k<out.length;k++){ var cur=out[k]; res.push(cur); var n2=out[k+1]; if(!n2)continue;
+      var end=(cur.t==="num"||cur.t==="id"||cur.t==="unk"||cur.t==="rp"), start=(n2.t==="num"||n2.t==="id"||n2.t==="unk"||n2.t==="lp");
+      if(end&&start) res.push({t:"op",v:"*"}); }
+    return res; }
+  function parseEval(toks,xVal,resolve){ var pos=0;
+    function peek(){return toks[pos];} function nextT(){return toks[pos++];}
+    function expr(){ var v=term(); while(peek()&&peek().t==="op"&&(peek().v==="+"||peek().v==="-")){var o=nextT().v,r=term();v=o==="+"?v+r:v-r;} return v; }
+    function term(){ var v=factor(); while(peek()&&peek().t==="op"&&(peek().v==="*"||peek().v==="/")){var o=nextT().v,r=factor();v=o==="*"?v*r:v/r;} return v; }
+    function factor(){ var tk=peek(); if(!tk)throw "Unfinished amount.";
+      if(tk.t==="op"&&(tk.v==="-"||tk.v==="+")){nextT();var f=factor();return tk.v==="-"?-f:f;}
+      if(tk.t==="num"){nextT();return tk.v;}
+      if(tk.t==="unk"){nextT();return xVal;}
+      if(tk.t==="lp"){nextT();var e=expr();if(!peek()||peek().t!=="rp")throw "Missing ) in an amount.";nextT();return e;}
+      if(tk.t==="id"){nextT();return resolve(tk.v);}
+      throw "Can't read an amount."; }
+    var out=expr(); if(pos<toks.length)throw "Extra text in an amount."; return out; }
+
+  /* ---- charts (canvas) ---- */
+  function fitCanvas(c,h){ var dpr=window.devicePixelRatio||1,w=c.clientWidth||c.parentNode.clientWidth-32; c.width=w*dpr;c.height=h*dpr;c.style.height=h+"px"; var ctx=c.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); return {ctx:ctx,w:w,h:h}; }
+  function statHTML(k,v,cls){ return '<div class="stat"><div class="k">'+k+'</div><div class="v mono '+(cls||"")+'">'+v+'</div></div>'; }
+  /* ================= INVESTMENT FLOW ================= */
+  var invData=[
+    {sign:-1, mag:"50000",       n:"1",  freq:12, date:"2026-11-01", desc:"Original Equipment Cost", code:"OEC", noint:false},
+    {sign:1,  mag:"X",           n:"36", freq:12, date:"2026-12-01", desc:"Lease payment",           code:"PMT", noint:false},
+    {sign:1,  mag:"0.20 x OEC",  n:"1",  freq:12, date:"2029-11-01", desc:"Residual",                code:"RES", noint:false}
+  ];
+  var FREQOPTS=[[12,"Monthly"],[4,"Quarterly"],[2,"Semi"],[1,"Annual"]];
+  function freqSel(v){ v=+v||12; return '<select class="inp cf-per">'+FREQOPTS.map(function(o){return '<option value="'+o[0]+'"'+(o[0]===v?" selected":"")+'>'+o[1]+'</option>';}).join("")+'</select>'; }
+  var invDrag=null;
+  function esc(s){ return (""+(s==null?"":s)).replace(/"/g,"&quot;"); }
+  function buildInv(){ var host=$("#invRows");host.innerHTML="";
+    var scroll=document.createElement("div");scroll.className="cf-scroll";
+    var sheet=document.createElement("div");sheet.className="cf-sheet";
+    var hd=document.createElement("div");hd.className="cf-hd";
+    hd.innerHTML='<span></span><span></span><span>Description</span><span>Code</span><span>Date</span><span>Amount</span><span class="rt">×N</span><span>Per</span><span class="rt">No int</span><span></span>';
+    sheet.appendChild(hd);
+    invData.forEach(function(row,idx){
+      var el=document.createElement("div");
+      if(row.kind==="rate"){
+        el.className="cf-line ratel";
+        el.innerHTML=
+          '<span class="cf-grip" title="Drag to reorder">⠿</span>'+
+          '<span class="dir rateb" title="Rate change">%</span>'+
+          '<input class="inp cf-desc" value="'+esc(row.desc)+'" placeholder="Rate change">'+
+          '<span class="cf-none"></span>'+
+          '<input class="inp cf-date" type="date" value="'+esc(row.date)+'">'+
+          '<span class="cf-ratewrap"><input class="inp cf-mag cf-nb" value="'+esc(row.mag)+'" placeholder="new %"><b>%</b></span>'+
+          '<span class="cf-none"></span><span class="cf-none"></span><span class="cf-none"></span>'+
+          '<button type="button" class="del" title="Remove">×</button>';
+      } else {
+        el.className="cf-line "+(row.sign<0?"outrow":"inrow")+(row.noint?" noint":"");
+        var sc=row.sign<0?"out":"in";
+        el.innerHTML=
+          '<span class="cf-grip" title="Drag to reorder">⠿</span>'+
+          '<button type="button" class="dir '+sc+'" title="Money in / out">'+(sc==="in"?"＋":"－")+'</button>'+
+          '<input class="inp cf-desc" value="'+esc(row.desc)+'" placeholder="'+(row.sign<0?"Original Equipment Cost":"Lease payment")+'">'+
+          '<input class="inp cf-code" value="'+esc(row.code)+'" placeholder="'+(row.sign<0?"OEC":"CODE")+'" title="Short code — reuse in other lines, e.g. 0.15 x '+esc(row.code||"OEC")+'">'+
+          '<input class="inp cf-date" type="date" value="'+esc(row.date)+'">'+
+          '<input class="inp cf-mag" value="'+esc(row.mag)+'" placeholder="amount / 0.15 x OEC / X">'+
+          '<input class="inp cf-n cf-nb" value="'+esc(row.n)+'">'+
+          freqSel(row.freq)+
+          '<span class="cf-cint"><input type="checkbox" class="cf-noint-cb"'+(row.noint?" checked":"")+' title="Pass-through, no interest"></span>'+
+          '<button type="button" class="del" title="Remove">×</button>';
+        el.querySelector(".dir").addEventListener("click",function(){ syncInv(); invData[idx].sign=invData[idx].sign<0?1:-1; buildInv(); setStale(true); });
+        el.querySelector(".cf-noint-cb").addEventListener("change",function(){ syncInv(); invData[idx].noint=this.checked; buildInv(); setStale(true); });
+      }
+      el.querySelector(".del").addEventListener("click",function(){ syncInv(); invData.splice(idx,1); if(!invData.length)invData.push({sign:-1,mag:"0",n:"1",freq:12,date:nextMonthFirst(),desc:"",code:"",noint:false}); buildInv(); setStale(true); });
+      $$("input,select",el).forEach(function(inp){ if(inp.type!=="checkbox") inp.addEventListener("change",function(){ syncInv(); renderWarnings(); setStale(true); }); });
+      var grip=el.querySelector(".cf-grip");
+      grip.addEventListener("mousedown",function(){ el.setAttribute("draggable","true"); });
+      el.addEventListener("dragstart",function(e){ invDrag=idx; el.classList.add("drag"); e.dataTransfer.effectAllowed="move"; });
+      el.addEventListener("dragend",function(){ el.classList.remove("drag"); el.setAttribute("draggable","false"); $$(".cf-line").forEach(function(c){c.classList.remove("over");}); });
+      el.addEventListener("dragover",function(e){ e.preventDefault(); el.classList.add("over"); });
+      el.addEventListener("dragleave",function(){ el.classList.remove("over"); });
+      el.addEventListener("drop",function(e){ e.preventDefault(); el.classList.remove("over"); if(invDrag==null||invDrag===idx)return; syncInv(); var it=invData.splice(invDrag,1)[0]; invData.splice(idx,0,it); invDrag=null; buildInv(); setStale(true); });
+      sheet.appendChild(el);
+    });
+    scroll.appendChild(sheet); host.appendChild(scroll);
+    // template mode: lock structure & timing, keep $ amounts + rate editable
+    ["invAdd","invAddSvc","invAddRate","invRechain"].forEach(function(id){ var b=$("#"+id); if(b)b.disabled=templateLock; });
+    if(templateLock){ $$("#invRows .cf-desc,#invRows .cf-code,#invRows .cf-date,#invRows .cf-n,#invRows .cf-per,#invRows .dir,#invRows .up,#invRows .dn,#invRows .del,#invRows .cf-noint-cb").forEach(function(el){ el.disabled=true; });
+      $$("#invRows .cf-grip").forEach(function(g){ g.style.visibility="hidden"; }); }
+    var st=$("#invStatus"); if(st){ st.className="lb-status"+(templateLock?" tpl":""); st.textContent=templateLock?("Template “"+(currentName||"")+"” — only $ amounts and the rate are editable; timing & structure are locked"):(currentName?("Lease: "+currentName):""); }
+    renderWarnings();
+  }
+  function rechainDates(){ syncInv();
+    // chain each group in its own order using each line's own periodicity; first line keeps its date
+    function chain(idxs){ for(var j=1;j<idxs.length;j++){ var p=invData[idxs[j-1]], pd=parseDate(p.date); if(!pd)continue; var pn=Math.max(1,Math.round(num(p.n))||1), pf=+p.freq||12; invData[idxs[j]].date=isoOf(addByFreq(pd,pf,pn)); } }
+    // service (no-interest) lines run in parallel to the lease; rate-change lines keep their own dates
+    var lease=[],svc=[]; invData.forEach(function(r,i){ if(r.kind==="rate")return; (r.noint?svc:lease).push(i); });
+    chain(lease); chain(svc);
+    buildInv(); setStale(true); }
+
+  /* ---- save / recall / templates / new / reset ---- */
+  var templateLock=false, currentName="", currentKind="", invStale=false;
+  /* ---- series validation + recalc-needed flag ---- */
+  function validateSeries(){ var warns=[],lease=[],svc=[],rates=[];
+    invData.forEach(function(r,i){ var d=parseDate(r.date), label=(r.desc&&(""+r.desc).trim())||((r.kind==="rate"?"Rate change":"Line")+" "+(i+1));
+      if(r.kind==="rate"){ if(!d)warns.push("“"+label+"” has no valid date."); else rates.push({label:label,date:d}); return; }
+      if(!d){ warns.push("“"+label+"” has no valid date."); return; }
+      var n=Math.max(1,Math.round(num(r.n))||1), f=+r.freq||12;
+      (r.noint?svc:lease).push({label:label,start:d,n:n,end:addByFreq(d,f,n-1)}); });
+    function grp(list,kind){ for(var k=1;k<list.length;k++){ var p=list[k-1],c=list[k]; if(!p.start||!c.start)continue;
+      if(daysBetween(p.start,c.start)<0) warns.push(kind+" “"+c.label+"” ("+fmtDate(c.start)+") starts before “"+p.label+"” ("+fmtDate(p.start)+") — rows are out of date order.");
+      else if(p.n>1 && daysBetween(c.start,p.end)>0) warns.push(kind+" “"+p.label+"” runs ×"+p.n+" through "+fmtDate(p.end)+", overlapping “"+c.label+"” starting "+fmtDate(c.start)+"."); } }
+    grp(lease,"Lease line"); grp(svc,"Service line");
+    if(lease.length){ var lo=lease[0].start,hi=lease[0].end||lease[0].start;
+      lease.forEach(function(x){ if(daysBetween(x.start,lo)>0)lo=x.start; var e=x.end||x.start; if(daysBetween(hi,e)>0)hi=e; });
+      rates.forEach(function(rt){ if(daysBetween(rt.date,lo)>0||daysBetween(hi,rt.date)>0) warns.push("Rate change on "+fmtDate(rt.date)+" is outside the lease term ("+fmtDate(lo)+" – "+fmtDate(hi)+")."); }); }
+    return warns; }
+  function renderWarnings(){ var host=$("#invWarn"); if(!host)return; host.innerHTML=validateSeries().map(function(s){return '<div class="warn-item">'+esc(s)+'</div>';}).join(""); }
+  function setStale(on){ invStale=!!on; var f=$("#invRecalcFlag"); if(f)f.classList.toggle("show",invStale); var b=$("#invCalc"); if(b)b.classList.toggle("needs",invStale); var res=$("#invResult"); if(res)res.classList.toggle("stale",invStale && res.innerHTML.trim()!==""); }
+  function nextMonthFirst(){ var d=new Date(),y=d.getFullYear(),nm=d.getMonth()+1; if(nm>11){nm=0;y++;} return y+"-"+String(nm+1).padStart(2,"0")+"-01"; }
+  function defaultDeal(base){ var b=parseDate(base); return [
+    {sign:-1,mag:"50000",n:"1",freq:12,date:base,desc:"Original Equipment Cost",code:"OEC",noint:false},
+    {sign:1, mag:"X",n:"36",freq:12,date:isoOf(addByFreq(b,12,1)), desc:"Lease payment",code:"PMT",noint:false},
+    {sign:1, mag:"0.20 x OEC",n:"1",freq:12,date:isoOf(addByFreq(b,12,36)),desc:"Residual",code:"RES",noint:false}]; }
+  function newLease(){ var base=nextMonthFirst(); invData=[{sign:-1,mag:"0",n:"1",freq:12,date:base,desc:"Original Equipment Cost",code:"OEC",noint:false}];
+    $("#invRate").value="7"; templateLock=false; currentName=""; currentKind=""; buildInv(); $("#invErr").classList.remove("show"); $("#invResult").innerHTML=""; setStale(false); }
+  function resetLease(){ var base=nextMonthFirst(); invData=defaultDeal(base); $("#invRate").value="7"; $("#invDay").value="act365"; templateLock=false; currentName=""; currentKind=""; buildInv(); runInv(false); }
+  function syncInv(){ $$("#invRows .cf-line").forEach(function(r,i){ if(!invData[i])return; var q=function(s){return $(s,r);};
+    var d=q(".cf-desc"); if(d)invData[i].desc=d.value;
+    var dt=q(".cf-date"); if(dt)invData[i].date=dt.value;
+    var mg=q(".cf-mag"); if(mg)invData[i].mag=mg.value;
+    if(invData[i].kind==="rate")return;
+    var c=q(".cf-code"); if(c)invData[i].code=c.value;
+    var n=q(".cf-n"); if(n)invData[i].n=n.value;
+    var pe=q(".cf-per"); if(pe)invData[i].freq=+pe.value||12;
+    var ic=q(".cf-noint-cb"); if(ic)invData[i].noint=ic.checked;
+    var dir=q(".dir"); if(dir)invData[i].sign=dir.classList.contains("out")?-1:1; }); }
+  function runInv(commit){
+    var err=$("#invErr");err.classList.remove("show");
+    try{ syncInv(); renderWarnings();
+      var dayb=$("#invDay").value;
+      var rateStr=$("#invRate").value, rateUnknown=isUnk(rateStr);
+      var baseRate=rateUnknown?NaN:num(rateStr)/100;
+
+      /* map of code -> row index (reserve X); rate-change lines carry no code */
+      var codeMap={};
+      invData.forEach(function(r,i){ if(r.kind==="rate")return; var c=(r.code||"").trim().toLowerCase(); if(c && c!=="x") codeMap[c]=i; });
+      function rowMag(idx,xVal,stack){
+        if(stack.indexOf(idx)>=0) throw "Codes reference each other in a loop.";
+        var raw=(invData[idx].mag||"").trim(); if(raw==="") return 0;
+        return parseEval(normalizeAmt(tokenizeAmt(raw)),xVal,function(name){
+          var j=codeMap[name.toLowerCase()];
+          if(j===undefined) throw "Unknown code \""+name.toUpperCase()+"\" — give a line that code first.";
+          return rowMag(j,xVal,stack.concat(idx));
+        });
+      }
+      /* linear form c + k*X for every line (X straight-line only); rate lines aren't cash flows */
+      var lin=invData.map(function(r,i){ if(r.kind==="rate")return {c:0,k:0}; var c=rowMag(i,0,[]),v1=rowMag(i,1,[]),v2=rowMag(i,2,[]),k=v1-c;
+        if(Math.abs((v2-c)-2*k)>1e-6*(1+Math.abs(c))) throw "X can only be used straight-line (like 0.5X), not multiplied by itself.";
+        return {c:c,k:k}; });
+      var xInFlows=lin.some(function(l){return Math.abs(l.k)>1e-9;});
+      if(xInFlows && rateUnknown) throw "Leave one unknown — either X in the amounts or X in the rate, not both.";
+
+      /* rate-change lines -> variable-rate schedule */
+      var rateEv=[];
+      invData.forEach(function(r){ if(r.kind!=="rate")return; var d=parseDate(r.date); if(!d)throw "Give the rate-change line a date."; var rv=num(r.mag); if(!isFinite(rv))throw "The rate-change line needs a rate %."; rateEv.push({date:d,rate:rv/100}); });
+      var hasRateEv=rateEv.length>0;
+      if(hasRateEv && rateUnknown) throw "Enter a starting rate — an IRR can't be solved when the lease steps its rate.";
+      if(!rateUnknown && !isFinite(baseRate)) throw "Enter a target rate, or type X to solve the IRR.";
+
+      /* expand rows into dated flows using each line's own periodicity */
+      var ib=[],ni=[];
+      invData.forEach(function(r,i){ if(r.kind==="rate")return; var n=Math.max(1,Math.round(num(r.n))||1), d0=parseDate(r.date);
+        if(!d0) throw "Give \""+(r.desc||("line "+(i+1)))+"\" a date."; var sg=r.sign<0?-1:1, f=+r.freq||12;
+        for(var k=0;k<n;k++){ var fl={date:addByFreq(d0,f,k),c:sg*lin[i].c,k:sg*lin[i].k}; (r.noint?ni:ib).push(fl); } });
+      if(ib.length<2) throw "Add at least two interest-bearing cash flows (money out, then payments in).";
+
+      var ref=null; ib.forEach(function(fl){ if(!ref||daysBetween(fl.date,ref)>0)ref=fl.date; });
+      function cmp(a,b){ return Date.UTC(a.y,a.m-1,a.d)-Date.UTC(b.y,b.m-1,b.d); }
+      var sortedEv=rateEv.slice().sort(function(a,b){return cmp(a.date,b.date);});
+      function makeBps(base){ var startRate=base, future=[]; sortedEv.forEach(function(e){ if(cmp(e.date,ref)<=0) startRate=e.rate; else future.push(e); }); return [{date:ref,rate:startRate}].concat(future); }
+      // APR in force at/just-after a date, given a starting APR
+      function aprAt(s,base){ var a=base; for(var i=0;i<sortedEv.length;i++){ if(cmp(sortedEv[i].date,s)<=0) a=sortedEv[i].rate; } return a; }
+      // compounding boundaries: ref + every interest-bearing flow date + every rate-change date (unique, sorted)
+      var bd=[],seen={}; function addBd(d){ var kk=isoOf(d); if(!seen[kk]){seen[kk]=1; bd.push(d);} }
+      addBd(ref); ib.forEach(function(fl){ addBd(fl.date); }); sortedEv.forEach(function(e){ if(cmp(e.date,ref)>0)addBd(e.date); }); bd.sort(cmp);
+      // APR applied LINEARLY over the basis year-fraction, compounded at each boundary → basis defines the compounding
+      function dfMap(base){ var m={},cur=1,prev=null; bd.forEach(function(d){ if(prev){ var a=aprAt(prev,base); cur=cur/(1+a*yearFrac(prev,d,dayb)); } m[isoOf(d)]=cur; prev=d; }); return m; }
+      function npvAt(base,flows){ var m=dfMap(base); return flows.reduce(function(s,fl){return s+fl.amt*m[isoOf(fl.date)];},0); }
+      function irrOf(flows){ function f(r){return npvAt(r,flows);} var a=-0.9999,fa=f(a),step=0.004,x=a+step,b;
+        while(x<=3){var fx=f(x);if(fa*fx<0){b=x;break;}a=x;fa=fx;x+=step;}
+        if(b===undefined)return NaN; for(var it=0;it<240;it++){var mm=(a+b)/2,fm=f(mm);if(Math.abs(fm)<1e-7||(b-a)<1e-13)return mm;if(f(a)*fm<0)b=mm;else a=mm;} return (a+b)/2; }
+
+      /* solve the unknown payment X, if any, at the (possibly stepped) APR */
+      var solvedX=null;
+      if(xInFlows){ var dfm=dfMap(baseRate),A=0,B=0;
+        ib.forEach(function(fl){ var d=dfm[isoOf(fl.date)]; A+=fl.c*d; B+=fl.k*d; });
+        if(Math.abs(B)<1e-12) throw "X doesn't move the result — check where you used it.";
+        solvedX=-A/B; }
+      var xv=solvedX==null?0:solvedX;
+      var amFlows=ib.map(function(fl){ return {date:fl.date,amt:fl.c+fl.k*xv}; });
+      var effIRR=irrOf(amFlows);
+      if(!hasRateEv && !xInFlows && !isFinite(effIRR)) throw "No IRR exists — the cash flows must change sign (money out, then in).";
+
+      /* amortize at the given APR schedule; for a pure-IRR solve use the solved APR so it closes to 0 */
+      var amortRate=(!hasRateEv && !xInFlows)?effIRR:baseRate;
+      var amRows=datedAmortVar(amFlows,makeBps(amortRate),dayb);
+
+      var annual=isFinite(effIRR)?effIRR:(isFinite(baseRate)?baseRate:amortRate);
+      var mfactor=annual/24; // money factor = APR / 2400
+      var bigL,bigV,bigC;
+      if(solvedX!=null){ bigL="Solve for X"; bigV=money(solvedX); bigC=solvedX<0?"neg":"pos"; }
+      else { bigL=hasRateEv?"Implicit APR · yield":"Implicit rate · APR"; bigV=(annual*100).toFixed(3)+"% <small>/ yr</small>"; bigC="pos"; }
+
+      var totInt=amRows.reduce(function(s,r){return s+r.interest;},0);
+      var financed=0,totIn=0; amFlows.forEach(function(fl){ if(fl.amt<0)financed+=-fl.amt; else totIn+=fl.amt; });
+      var sortd=amFlows.slice().sort(function(a,b){return cmp(a.date,b.date);});
+      var termMo=Math.round(yearFrac(sortd[0].date,sortd[sortd.length-1].date,"act365")*12);
+      var svc=0; ni.forEach(function(fl){ svc+=(fl.c+fl.k*xv); });
+      var hasSvc=ni.length>0;
+      var termTxt=termMo+" mo"+(termMo>=12?" ("+(termMo/12).toFixed(termMo%12?1:0)+" yr)":"");
+
+      /* merge interest-bearing + service into one schedule, aggregated by date */
+      var svcMap={}; ni.forEach(function(fl){ var key=isoOf(fl.date); if(!svcMap[key])svcMap[key]={date:fl.date,amt:0}; svcMap[key].amt+=(fl.c+fl.k*xv); });
+      var pmap={},porder=[];
+      amRows.forEach(function(r){ var key=isoOf(r.date); if(!pmap[key]){pmap[key]={date:r.date,cf:0,interest:0,bal:r.bal,svc:0,rateChange:null};porder.push(key);} pmap[key].cf+=r.cf; pmap[key].interest+=r.interest; pmap[key].bal=r.bal; if(r.isRate)pmap[key].rateChange=r.rate; });
+      Object.keys(svcMap).forEach(function(key){ if(!pmap[key]){pmap[key]={date:svcMap[key].date,cf:0,interest:0,bal:null,svc:0,rateChange:null};porder.push(key);} pmap[key].svc=svcMap[key].amt; });
+      porder.sort();
+      var lb=0; var periods=porder.map(function(key){ var p=pmap[key]; if(p.bal==null)p.bal=lb; else lb=p.bal; p.total=p.cf+p.svc; return p; });
+
+      var html='<div class="bigresult"><div class="rl">'+bigL+'</div><div class="rv" style="color:'+(bigC==="neg"?"var(--neg)":"var(--pos)")+'">'+bigV+'</div></div>';
+      html+='<div class="summary">This lease carries an implicit <b>'+(annual*100).toFixed(3)+'% APR</b> (money factor <b>'+mfactor.toFixed(5)+'</b>) over <b>'+termTxt+'</b>. On <b>'+money0(financed)+'</b> financed, the lessee pays <b>'+money0(totIn)+'</b> in total — <b>'+money0(totInt)+'</b> of that is finance charge (interest).'+(hasSvc?' A further <b>'+money0(svc)+'</b> of non-interest service is billed alongside, for <b>'+money0(totIn+svc)+'</b> all-in.':'')+(solvedX!=null?' Solved <b>X = '+money(solvedX)+'</b> per occurrence.':'')+'</div>';
+      html+='<div class="statgrid">'+statHTML("Implicit APR",(annual*100).toFixed(3)+"%")+statHTML("Money factor",mfactor.toFixed(5))+statHTML("Term",termMo+" mo")+statHTML("Amount financed",money0(financed))+statHTML("Total payments",money0(totIn))+statHTML("Total interest",money0(totInt))+(hasSvc?statHTML("Service (no int.)",money0(svc)):statHTML("Interest flows",ib.length+""))+'</div>';
+      html+='<div class="charts"><div class="chartbox"><h4>'+(hasSvc?"Total each period":"Cash flows")+'</h4><canvas id="invBars"></canvas></div><div class="chartbox"><h4>Cumulative (payback)</h4><canvas id="invArea"></canvas></div></div>';
+      var cols=hasSvc?'<th>Date</th><th>Financed</th><th>Interest</th><th>Balance</th><th>Service</th><th>Total pay</th>':'<th>Date</th><th>Cash flow</th><th>Interest</th><th>Balance</th>';
+      html+='<details class="sched" open><summary>'+(hasSvc?"Payment schedule":"Amortization schedule")+'<span class="tw" id="invCsv">CSV ↓</span></summary><div class="twrap"><table><thead><tr>'+cols+'</tr></thead><tbody id="invAmBody"></tbody></table></div></details>';
+      $("#invResult").innerHTML=html;
+      function col(v,bold){ return '<td'+(bold?' style="font-weight:600;color:'+(v<0?"var(--neg)":"var(--pos)")+'"':(' style="color:'+(v<0?"var(--neg)":"var(--pos)")+'"'))+'>'+money(v)+'</td>'; }
+      var bod=$("#invAmBody"),frag=document.createDocumentFragment();
+      periods.forEach(function(p){ var tr=document.createElement("tr"); if(p.rateChange!=null)tr.className="rc-row";
+        var dc=fmtDate(p.date)+(p.rateChange!=null?' <span class="rc">→ '+(p.rateChange*100).toFixed(3).replace(/\.?0+$/,"")+'%</span>':'');
+        var s='<td>'+dc+'</td>'+col(p.cf)+'<td>'+money(p.interest)+'</td><td>'+money(p.bal)+'</td>';
+        if(hasSvc) s+=col(p.svc)+col(p.total,true);
+        tr.innerHTML=s; frag.appendChild(tr); });
+      bod.appendChild(frag);
+      $("#invCsv").addEventListener("click",function(ev){ ev.preventDefault();
+        var lines=[hasSvc?"Date,Financed,Interest,Balance,Service,Total":"Date,Cash flow,Interest,Balance"];
+        periods.forEach(function(p){ var row=[isoOf(p.date),p.cf.toFixed(2),p.interest.toFixed(2),p.bal.toFixed(2)]; if(hasSvc)row.push(p.svc.toFixed(2),p.total.toFixed(2)); lines.push(row.join(",")); });
+        dl(lines.join("\n"),"lease-schedule.csv"); });
+      var chartS=periods.map(function(p){return p.total;}),cum=[],run=0; chartS.forEach(function(v){run+=v;cum.push(run);});
+      drawFlowBars($("#invBars"),chartS); drawCum($("#invArea"),cum);
+      lastRedraw=function(){ if($("#invBars")){drawFlowBars($("#invBars"),chartS);drawCum($("#invArea"),cum);} };
+
+      /* on Solve/Analyze, replace formulas & the unknown with their resolved values */
+      if(commit){ invData.forEach(function(r,i){ if(r.kind!=="rate") r.mag=magStr(lin[i].c+lin[i].k*xv); });
+        if(rateUnknown) $("#invRate").value=(""+(Math.round(annual*100000)/1000)); buildInv(); }
+      setStale(false);
+    }catch(e){ err.textContent=(typeof e==="string"?e:"Check your inputs."); err.classList.add("show"); $("#invResult").innerHTML=""; }
+  }
+  function drawFlowBars(c,cf){ var d=fitCanvas(c,180),ctx=d.ctx,pad={l:8,r:8,t:10,b:20},w=d.w-pad.l-pad.r,h=d.h-pad.t-pad.b;
+    var mx=Math.max.apply(null,cf.map(Math.abs))||1,zero=pad.t+h/2,n=cf.length,bw=Math.max(1,w/n*0.7),gap=w/n;
+    ctx.strokeStyle=cssv("--line");ctx.beginPath();ctx.moveTo(pad.l,zero);ctx.lineTo(pad.l+w,zero);ctx.stroke();
+    cf.forEach(function(v,k){ var x=pad.l+gap*k+(gap-bw)/2,bh=(h/2)*Math.abs(v)/mx; ctx.fillStyle=v<0?cssv("--neg"):cssv("--pos"); if(v<0)ctx.fillRect(x,zero,bw,bh);else ctx.fillRect(x,zero-bh,bw,bh); });
+  }
+  function drawCum(c,cum){ var d=fitCanvas(c,180),ctx=d.ctx,pad={l:8,r:8,t:12,b:18},w=d.w-pad.l-pad.r,h=d.h-pad.t-pad.b;
+    var mn=Math.min.apply(null,cum),mx=Math.max.apply(null,cum),rng=(mx-mn)||1,n=cum.length;
+    function X(k){return pad.l+w*k/(n-1)}function Y(v){return pad.t+h*(1-(v-mn)/rng)}
+    var zeroY=Y(0); ctx.strokeStyle=cssv("--line");ctx.beginPath();ctx.moveTo(pad.l,zeroY);ctx.lineTo(pad.l+w,zeroY);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(X(0),Y(cum[0]));for(var k=1;k<n;k++)ctx.lineTo(X(k),Y(cum[k]));ctx.strokeStyle=cssv("--accent");ctx.lineWidth=2;ctx.stroke();
+    var end=cum[n-1];ctx.fillStyle=end<0?cssv("--neg"):cssv("--pos");ctx.beginPath();ctx.arc(X(n-1),Y(end),3.5,0,7);ctx.fill();
+  }
+
+  /* ---- utils ---- */
+  function dl(text,name){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:"text/csv"}));a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000);}
+  var lastRedraw=null;
+
+  /* ---- router ---- */
+  function go(v){ $$(".view").forEach(function(x){x.classList.remove("active")}); var el=$("#v-"+v); if(el)el.classList.add("active"); window.scrollTo(0,0); if(v==="invest"){buildInv();runInv();} }
+  $("#homeBtn").addEventListener("click",function(){go("invest")});
+
+  /* wiring */
+  function addInvRow(noint){ syncInv();
+    var last=invData[invData.length-1], nd=nextMonthFirst();
+    if(last&&last.date){ var d0=parseDate(last.date); if(d0){ var n=Math.max(1,Math.round(num(last.n))||1), f=+last.freq||12; nd=isoOf(addByFreq(d0,f,n)); } }
+    invData.push({sign:1,mag:"0",n:"1",freq:(last&&last.freq)||12,date:nd,desc:noint?"Service":"",code:noint?"SERV":"",noint:!!noint}); buildInv(); setStale(true); }
+  function addRateLine(){ syncInv();
+    var last=invData[invData.length-1], nd=nextMonthFirst();
+    if(last&&last.date){ var d0=parseDate(last.date); if(d0){ var n=Math.max(1,Math.round(num(last.n))||1), f=+last.freq||12; nd=isoOf(addByFreq(d0,f,last.kind==="rate"?1:n)); } }
+    invData.push({kind:"rate",mag:($("#invRate")?($("#invRate").value||"7"):"7"),date:nd,desc:"Rate change"}); buildInv(); setStale(true); }
+  $("#invAdd").addEventListener("click",function(){ addInvRow(false); });
+  $("#invAddSvc").addEventListener("click",function(){ addInvRow(true); });
+  $("#invAddRate").addEventListener("click",addRateLine);
+  $("#invRechain").addEventListener("click",rechainDates);
+  $("#invNew").addEventListener("click",newLease);
+  $("#invReset").addEventListener("click",resetLease);
+  $("#invCalc").addEventListener("click",function(){ runInv(true); });
+  $("#invDay").addEventListener("change",function(){ setStale(true); });
+  $("#invRate").addEventListener("change",function(){ setStale(true); });
+  $("#invRate").addEventListener("keydown",function(e){ if(e.key==="Enter")runInv(true); });
+
+  function applyTheme(t){if(t)document.documentElement.setAttribute("data-theme",t);else document.documentElement.removeAttribute("data-theme");if(lastRedraw)setTimeout(lastRedraw,30);}
+  $("#themeBtn").addEventListener("click",function(){var cur=document.documentElement.getAttribute("data-theme");var sysDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;applyTheme(!cur?(sysDark?"light":"dark"):(cur==="dark"?"light":"dark"));});
+  window.addEventListener("resize",function(){if(lastRedraw)lastRedraw();});
+  go("invest"); // land on the NPV / cash-flow model
+})();
+</script>
+</body>
+</html>
