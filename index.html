@@ -206,7 +206,7 @@
         <div class="card-h"><h2>Lease Builder</h2><p>Lay out the cash flows of a lease, in date order. Give any line a <b>code</b> (like OEC) and reuse it elsewhere — a residual of <b>0.15 x OEC</b> updates itself. Put <b>X</b> in one or more amounts (or in the rate) and Solve fills it in.</p></div>
         <div class="card-b">
           <div class="lb-controls">
-            <label class="lbc">APR <span class="inwrap pct"><input class="inp" id="invRate" value="7"><span class="post">%</span></span> <span class="lbc-sub">nominal /yr · or X → solve</span></label>
+            <label class="lbc">APR <span class="inwrap pct"><input class="inp" id="invRate" value="4"><span class="post">%</span></span> <span class="lbc-sub">nominal /yr · or X → solve</span></label>
             <label class="lbc">Basis <select class="inp" id="invDay"><option value="act365">Actual/365</option><option value="act360">Actual/360</option><option value="d3030">30/360 US</option><option value="actact">Actual/Actual</option></select></label>
           </div>
           <div class="lb-status" id="invStatus"></div>
@@ -309,9 +309,9 @@
   function statHTML(k,v,cls){ return '<div class="stat"><div class="k">'+k+'</div><div class="v mono '+(cls||"")+'">'+v+'</div></div>'; }
   /* ================= INVESTMENT FLOW ================= */
   var invData=[
-    {sign:-1, mag:"50000",       n:"1",  freq:12, date:"2026-11-01", desc:"Original Equipment Cost", code:"OEC", noint:false},
-    {sign:1,  mag:"X",           n:"36", freq:12, date:"2026-12-01", desc:"Lease payment",           code:"PMT", noint:false},
-    {sign:1,  mag:"0.20 x OEC",  n:"1",  freq:12, date:"2029-11-01", desc:"Residual",                code:"RES", noint:false}
+    {sign:-1, mag:"2500000",     n:"1",  freq:12, date:"2026-11-01", desc:"Original Equipment Cost", code:"OEC", noint:false},
+    {sign:1,  mag:"X",           n:"6",  freq:12, date:"2026-12-01", desc:"Lease payment",           code:"PMT", noint:false},
+    {sign:1,  mag:"0.20 x OEC",  n:"1",  freq:12, date:"2027-05-01", desc:"Residual",                code:"RES", noint:false}
   ];
   var FREQOPTS=[[12,"Monthly"],[4,"Quarterly"],[2,"Semi"],[1,"Annual"]];
   function freqSel(v){ v=+v||12; return '<select class="inp cf-per">'+FREQOPTS.map(function(o){return '<option value="'+o[0]+'"'+(o[0]===v?" selected":"")+'>'+o[1]+'</option>';}).join("")+'</select>'; }
@@ -431,12 +431,12 @@
     }catch(e){ window.alert("Couldn’t read that file — is it an Amortable export?"); } };
     r.readAsText(file); }
   function defaultDeal(base){ var b=parseDate(base); return [
-    {sign:-1,mag:"50000",n:"1",freq:12,date:base,desc:"Original Equipment Cost",code:"OEC",noint:false},
-    {sign:1, mag:"X",n:"36",freq:12,date:isoOf(addByFreq(b,12,1)), desc:"Lease payment",code:"PMT",noint:false},
-    {sign:1, mag:"0.20 x OEC",n:"1",freq:12,date:isoOf(addByFreq(b,12,36)),desc:"Residual",code:"RES",noint:false}]; }
+    {sign:-1,mag:"2500000",n:"1",freq:12,date:base,desc:"Original Equipment Cost",code:"OEC",noint:false},
+    {sign:1, mag:"X",n:"6",freq:12,date:isoOf(addByFreq(b,12,1)), desc:"Lease payment",code:"PMT",noint:false},
+    {sign:1, mag:"0.20 x OEC",n:"1",freq:12,date:isoOf(addByFreq(b,12,6)),desc:"Residual",code:"RES",noint:false}]; }
   function newLease(){ var base=nextMonthFirst(); invData=[{sign:-1,mag:"0",n:"1",freq:12,date:base,desc:"Original Equipment Cost",code:"OEC",noint:false}];
-    $("#invRate").value="7"; templateLock=false; currentName=""; currentKind=""; buildInv(); $("#invErr").classList.remove("show"); $("#invResult").innerHTML=""; setStale(false); }
-  function resetLease(){ var base=nextMonthFirst(); invData=defaultDeal(base); $("#invRate").value="7"; $("#invDay").value="act365"; templateLock=false; currentName=""; currentKind=""; buildInv(); runInv(false); }
+    $("#invRate").value="4"; templateLock=false; currentName=""; currentKind=""; buildInv(); $("#invErr").classList.remove("show"); $("#invResult").innerHTML=""; setStale(false); }
+  function resetLease(){ var base=nextMonthFirst(); invData=defaultDeal(base); $("#invRate").value="4"; $("#invDay").value="act365"; templateLock=false; currentName=""; currentKind=""; buildInv(); runInv(false); }
   function syncInv(){ $$("#invRows .cf-line").forEach(function(r,i){ if(!invData[i])return; var q=function(s){return $(s,r);};
     var d=q(".cf-desc"); if(d)invData[i].desc=d.value;
     var dt=q(".cf-date"); if(dt)invData[i].date=dt.value;
