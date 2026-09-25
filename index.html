@@ -17,6 +17,7 @@
     --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code","Roboto Mono",Menlo,Consolas,monospace;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --r:12px;
+    color-scheme:light;
   }
   @media (prefers-color-scheme:dark){:root{
     --ground:#0B0F16; --surface:#141B25; --surface-2:#1A2330; --inset:#10171F;
@@ -24,9 +25,10 @@
     --accent:#6E97F2; --accent-ink:#A6C1F8; --accent-soft:#1B2740;
     --pos:#40BB8B; --pos-soft:#16281F; --neg:#E5796B; --neg-soft:#2C1A17; --gold:#E0A94E;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 34px -18px rgba(0,0,0,.7);
+    color-scheme:dark;
   }}
-  :root[data-theme="light"]{--ground:#EAEEF3;--surface:#FFFFFF;--surface-2:#F4F6F9;--inset:#EEF1F5;--ink:#131A24;--muted:#5C6675;--faint:#8B95A3;--line:#DCE2EA;--line-strong:#C6CEDA;--accent:#2B57C4;--accent-ink:#1E3F98;--accent-soft:#E7EDFB;--pos:#0F7A4D;--pos-soft:#E4F3EB;--neg:#B43B2C;--neg-soft:#F8E9E6;--gold:#C9832B;--shadow:0 1px 2px rgba(20,30,50,.06),0 10px 30px -14px rgba(20,30,50,.18);}
-  :root[data-theme="dark"]{--ground:#0B0F16;--surface:#141B25;--surface-2:#1A2330;--inset:#10171F;--ink:#E7ECF3;--muted:#96A1AF;--faint:#68737F;--line:#26303D;--line-strong:#333F4E;--accent:#6E97F2;--accent-ink:#A6C1F8;--accent-soft:#1B2740;--pos:#40BB8B;--pos-soft:#16281F;--neg:#E5796B;--neg-soft:#2C1A17;--gold:#E0A94E;--shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px -18px rgba(0,0,0,.7);}
+  :root[data-theme="light"]{color-scheme:light;--ground:#EAEEF3;--surface:#FFFFFF;--surface-2:#F4F6F9;--inset:#EEF1F5;--ink:#131A24;--muted:#5C6675;--faint:#8B95A3;--line:#DCE2EA;--line-strong:#C6CEDA;--accent:#2B57C4;--accent-ink:#1E3F98;--accent-soft:#E7EDFB;--pos:#0F7A4D;--pos-soft:#E4F3EB;--neg:#B43B2C;--neg-soft:#F8E9E6;--gold:#C9832B;--shadow:0 1px 2px rgba(20,30,50,.06),0 10px 30px -14px rgba(20,30,50,.18);}
+  :root[data-theme="dark"]{color-scheme:dark;--ground:#0B0F16;--surface:#141B25;--surface-2:#1A2330;--inset:#10171F;--ink:#E7ECF3;--muted:#96A1AF;--faint:#68737F;--line:#26303D;--line-strong:#333F4E;--accent:#6E97F2;--accent-ink:#A6C1F8;--accent-soft:#1B2740;--pos:#40BB8B;--pos-soft:#16281F;--neg:#E5796B;--neg-soft:#2C1A17;--gold:#E0A94E;--shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px -18px rgba(0,0,0,.7);}
   *{box-sizing:border-box}
   html,body{margin:0}
   body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-bottom:56px}
@@ -85,6 +87,7 @@
   .inwrap.money .inp{padding-left:26px} .inwrap.pct .inp{padding-right:28px}
   .inp:focus{outline:2px solid var(--accent);border-color:var(--accent);background:var(--surface)}
   select.inp{cursor:pointer;font-family:var(--sans);font-size:15px;padding-right:26px;text-overflow:ellipsis}
+  select.inp option,select.inp optgroup{background:var(--surface);color:var(--ink)}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   /* result */
   .bigresult{background:linear-gradient(180deg,var(--accent-soft),transparent);border:1px solid var(--line);border-radius:var(--r);padding:24px;text-align:center;margin-bottom:18px}
@@ -162,9 +165,10 @@
   .cf-line .del{width:26px;font-size:15px}
   .cf-move button:hover,.cf-line .del:hover{color:var(--ink);border-color:var(--muted)}
   .cf-tools{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}
-  /* lease-builder file bar */
-  .lb-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px}
-  .lb-recall{flex:1 1 210px;min-width:190px;max-width:360px;height:38px;font-size:13px;padding-right:26px;text-overflow:ellipsis}
+  /* header file controls */
+  .topfile{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+  .topfile .btn.sm{padding:7px 10px}
+  .lb-recall{height:34px;font-size:13px;padding-right:26px;text-overflow:ellipsis;width:150px;min-width:130px}
   .lb-btns{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
   .lb-sep{width:1px;align-self:stretch;background:var(--line);margin:2px 3px}
   .lb-controls{display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-bottom:12px}
@@ -202,13 +206,19 @@
 <header>
   <div class="bar">
     <button class="mark" id="homeBtn" type="button">Amort<b>able</b></button>
-    <nav class="topnav" id="topnav">
-      <button class="navtab" type="button" data-go="invest" aria-current="true">Lease Builder</button>
-      <button class="navtab" type="button" data-go="lease">Lease</button>
-      <button class="navtab" type="button" data-go="loan">Loan</button>
-      <button class="navtab" type="button" data-go="advanced">Advanced</button>
-    </nav>
-    <span class="spacer"></span>
+    <div class="topfile">
+      <select class="inp lb-recall" id="invRecall"><option value="">Recall…</option></select>
+      <button class="btn ghost sm" id="invSave" type="button">Save</button>
+      <button class="btn ghost sm" id="invSaveTpl" type="button">Template</button>
+      <button class="btn ghost sm" id="invDelete" type="button" title="Delete the recalled lease/template">Delete</button>
+      <span class="lb-sep"></span>
+      <button class="btn ghost sm" id="invNew" type="button">New</button>
+      <button class="btn ghost sm" id="invReset" type="button">Reset</button>
+      <span class="lb-sep"></span>
+      <button class="btn ghost sm" id="invExport" type="button" title="Download all saved leases &amp; templates">Export</button>
+      <button class="btn ghost sm" id="invImport" type="button" title="Load leases &amp; templates from a file">Import</button>
+      <input type="file" id="invImportFile" accept="application/json,.json" style="display:none">
+    </div>
     <button class="toggle" id="themeBtn" type="button">◑</button>
   </div>
 </header>
@@ -321,21 +331,6 @@
       <div class="card">
         <div class="card-h"><h2>Lease Builder</h2><p>Lay out the cash flows of a lease, in date order. Give any line a <b>code</b> (like OEC) and reuse it elsewhere — a residual of <b>0.15 x OEC</b> updates itself. Put <b>X</b> in one or more amounts (or in the rate) and Solve fills it in.</p></div>
         <div class="card-b">
-          <div class="lb-bar">
-            <select class="inp lb-recall" id="invRecall"><option value="">Recall a saved lease…</option></select>
-            <div class="lb-btns">
-              <button class="btn ghost sm" id="invSave" type="button">Save</button>
-              <button class="btn ghost sm" id="invSaveTpl" type="button">Save as template</button>
-              <button class="btn ghost sm" id="invDelete" type="button" title="Delete the recalled lease/template">Delete</button>
-              <span class="lb-sep"></span>
-              <button class="btn ghost sm" id="invNew" type="button">New lease</button>
-              <button class="btn ghost sm" id="invReset" type="button">Reset</button>
-              <span class="lb-sep"></span>
-              <button class="btn ghost sm" id="invExport" type="button" title="Download all saved leases &amp; templates as a file">Export</button>
-              <button class="btn ghost sm" id="invImport" type="button" title="Load leases &amp; templates from a file">Import</button>
-              <input type="file" id="invImportFile" accept="application/json,.json" style="display:none">
-            </div>
-          </div>
           <div class="lb-controls">
             <label class="lbc">Rate <span class="inwrap pct"><input class="inp" id="invRate" value="7"><span class="post">%</span></span> <span class="lbc-sub">/yr · or X → IRR</span></label>
             <label class="lbc">Basis <select class="inp" id="invDay"><option value="act365">Actual/365</option><option value="act360">Actual/360</option><option value="d3030">30/360 US</option><option value="actact">Actual/Actual</option></select></label>
