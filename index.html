@@ -161,6 +161,15 @@
   .lb-status:empty{display:none}
   .lb-status.tpl{color:var(--accent-ink);font-weight:600}
   .lb-status.tpl::before{content:"🔒 "}
+  .lb-warn{display:flex;flex-direction:column;gap:6px;margin:0 0 14px}
+  .lb-warn:empty{display:none}
+  .warn-item{background:color-mix(in srgb,var(--gold) 13%,transparent);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);color:var(--ink);border-radius:8px;padding:8px 11px;font-size:12.5px;line-height:1.45}
+  .warn-item::before{content:"⚠  ";color:var(--gold);font-weight:700}
+  .lb-recalc{display:none;align-items:center;gap:8px;background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px dashed color-mix(in srgb,var(--accent) 50%,transparent);color:var(--accent-ink);border-radius:9px;padding:9px 13px;font-size:13px;margin-bottom:12px}
+  .lb-recalc.show{display:flex}
+  #invResult.stale{opacity:.4;filter:saturate(.55);transition:opacity .15s ease}
+  #invCalc.needs{animation:pulse 1.7s ease-out infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
   .btn:disabled{opacity:.5;cursor:not-allowed}
   .cf-line .inp:disabled,.cf-line .dir:disabled,.cf-line button:disabled{opacity:.5;cursor:not-allowed;background:var(--surface-2)}
   .cfhint{font-size:11px;color:var(--faint);margin:-4px 2px 10px}
@@ -203,6 +212,7 @@
           <div class="lb-status" id="invStatus"></div>
           <div class="err" id="invErr"></div>
           <div id="invRows"></div>
+          <div class="lb-warn" id="invWarn"></div>
           <div class="cfhint">Set each line's own <b>periodicity</b> in the Per column. Drag the <b>⠿</b> handle to reorder, then <b>Re-chain dates</b> to space them by ×N. Money out is red (－), in is green (＋). Tick <b>no interest</b> for pass-through fees (e.g. service). Add a <b>Rate change</b> line (a date + a new rate) for a stepped/floating rate.</div>
           <div class="cf-tools">
             <button class="btn ghost sm" id="invAdd" type="button">+ Cash flow</button>
@@ -210,6 +220,7 @@
             <button class="btn ghost sm" id="invAddRate" type="button">+ Rate change</button>
             <button class="btn ghost sm" id="invRechain" type="button">↻ Re-chain dates</button>
           </div>
+          <div class="lb-recalc" id="invRecalcFlag">↻ Inputs changed — click <b>Solve / Analyze</b> to refresh the results.</div>
           <button class="btn" id="invCalc" type="button">Solve / Analyze</button>
         </div>
       </div>
@@ -339,18 +350,18 @@
           freqSel(row.freq)+
           '<span class="cf-cint"><input type="checkbox" class="cf-noint-cb"'+(row.noint?" checked":"")+' title="Pass-through, no interest"></span>'+
           '<button type="button" class="del" title="Remove">×</button>';
-        el.querySelector(".dir").addEventListener("click",function(){ syncInv(); invData[idx].sign=invData[idx].sign<0?1:-1; buildInv(); runInv(); });
-        el.querySelector(".cf-noint-cb").addEventListener("change",function(){ syncInv(); invData[idx].noint=this.checked; buildInv(); runInv(); });
+        el.querySelector(".dir").addEventListener("click",function(){ syncInv(); invData[idx].sign=invData[idx].sign<0?1:-1; buildInv(); setStale(true); });
+        el.querySelector(".cf-noint-cb").addEventListener("change",function(){ syncInv(); invData[idx].noint=this.checked; buildInv(); setStale(true); });
       }
-      el.querySelector(".del").addEventListener("click",function(){ syncInv(); invData.splice(idx,1); if(!invData.length)invData.push({sign:-1,mag:"0",n:"1",freq:12,date:nextMonthFirst(),desc:"",code:"",noint:false}); buildInv(); runInv(); });
-      $$("input,select",el).forEach(function(inp){ if(inp.type!=="checkbox") inp.addEventListener("change",function(){ syncInv(); runInv(); }); });
+      el.querySelector(".del").addEventListener("click",function(){ syncInv(); invData.splice(idx,1); if(!invData.length)invData.push({sign:-1,mag:"0",n:"1",freq:12,date:nextMonthFirst(),desc:"",code:"",noint:false}); buildInv(); setStale(true); });
+      $$("input,select",el).forEach(function(inp){ if(inp.type!=="checkbox") inp.addEventListener("change",function(){ syncInv(); renderWarnings(); setStale(true); }); });
       var grip=el.querySelector(".cf-grip");
       grip.addEventListener("mousedown",function(){ el.setAttribute("draggable","true"); });
       el.addEventListener("dragstart",function(e){ invDrag=idx; el.classList.add("drag"); e.dataTransfer.effectAllowed="move"; });
       el.addEventListener("dragend",function(){ el.classList.remove("drag"); el.setAttribute("draggable","false"); $$(".cf-line").forEach(function(c){c.classList.remove("over");}); });
       el.addEventListener("dragover",function(e){ e.preventDefault(); el.classList.add("over"); });
       el.addEventListener("dragleave",function(){ el.classList.remove("over"); });
-      el.addEventListener("drop",function(e){ e.preventDefault(); el.classList.remove("over"); if(invDrag==null||invDrag===idx)return; syncInv(); var it=invData.splice(invDrag,1)[0]; invData.splice(idx,0,it); invDrag=null; buildInv(); runInv(); });
+      el.addEventListener("drop",function(e){ e.preventDefault(); el.classList.remove("over"); if(invDrag==null||invDrag===idx)return; syncInv(); var it=invData.splice(invDrag,1)[0]; invData.splice(idx,0,it); invDrag=null; buildInv(); setStale(true); });
       sheet.appendChild(el);
     });
     scroll.appendChild(sheet); host.appendChild(scroll);
@@ -359,6 +370,7 @@
     if(templateLock){ $$("#invRows .cf-desc,#invRows .cf-code,#invRows .cf-date,#invRows .cf-n,#invRows .cf-per,#invRows .dir,#invRows .up,#invRows .dn,#invRows .del,#invRows .cf-noint-cb").forEach(function(el){ el.disabled=true; });
       $$("#invRows .cf-grip").forEach(function(g){ g.style.visibility="hidden"; }); }
     var st=$("#invStatus"); if(st){ st.className="lb-status"+(templateLock?" tpl":""); st.textContent=templateLock?("Template “"+(currentName||"")+"” — only $ amounts and the rate are editable; timing & structure are locked"):(currentName?("Lease: "+currentName):""); }
+    renderWarnings();
   }
   function rechainDates(){ syncInv();
     // chain each group in its own order using each line's own periodicity; first line keeps its date
@@ -366,11 +378,28 @@
     // service (no-interest) lines run in parallel to the lease; rate-change lines keep their own dates
     var lease=[],svc=[]; invData.forEach(function(r,i){ if(r.kind==="rate")return; (r.noint?svc:lease).push(i); });
     chain(lease); chain(svc);
-    buildInv(); runInv(); }
+    buildInv(); setStale(true); }
 
   /* ---- save / recall / templates / new / reset ---- */
   var LS_LEASE="amortable.leases.v1", LS_TPL="amortable.templates.v1";
-  var templateLock=false, currentName="", currentKind="";
+  var templateLock=false, currentName="", currentKind="", invStale=false;
+  /* ---- series validation + recalc-needed flag ---- */
+  function validateSeries(){ var warns=[],lease=[],svc=[],rates=[];
+    invData.forEach(function(r,i){ var d=parseDate(r.date), label=(r.desc&&(""+r.desc).trim())||((r.kind==="rate"?"Rate change":"Line")+" "+(i+1));
+      if(r.kind==="rate"){ if(!d)warns.push("“"+label+"” has no valid date."); else rates.push({label:label,date:d}); return; }
+      if(!d){ warns.push("“"+label+"” has no valid date."); return; }
+      var n=Math.max(1,Math.round(num(r.n))||1), f=+r.freq||12;
+      (r.noint?svc:lease).push({label:label,start:d,n:n,end:addByFreq(d,f,n-1)}); });
+    function grp(list,kind){ for(var k=1;k<list.length;k++){ var p=list[k-1],c=list[k]; if(!p.start||!c.start)continue;
+      if(daysBetween(p.start,c.start)<0) warns.push(kind+" “"+c.label+"” ("+fmtDate(c.start)+") starts before “"+p.label+"” ("+fmtDate(p.start)+") — rows are out of date order.");
+      else if(p.n>1 && daysBetween(c.start,p.end)>0) warns.push(kind+" “"+p.label+"” runs ×"+p.n+" through "+fmtDate(p.end)+", overlapping “"+c.label+"” starting "+fmtDate(c.start)+"."); } }
+    grp(lease,"Lease line"); grp(svc,"Service line");
+    if(lease.length){ var lo=lease[0].start,hi=lease[0].end||lease[0].start;
+      lease.forEach(function(x){ if(daysBetween(x.start,lo)>0)lo=x.start; var e=x.end||x.start; if(daysBetween(hi,e)>0)hi=e; });
+      rates.forEach(function(rt){ if(daysBetween(rt.date,lo)>0||daysBetween(hi,rt.date)>0) warns.push("Rate change on "+fmtDate(rt.date)+" is outside the lease term ("+fmtDate(lo)+" – "+fmtDate(hi)+")."); }); }
+    return warns; }
+  function renderWarnings(){ var host=$("#invWarn"); if(!host)return; host.innerHTML=validateSeries().map(function(s){return '<div class="warn-item">'+esc(s)+'</div>';}).join(""); }
+  function setStale(on){ invStale=!!on; var f=$("#invRecalcFlag"); if(f)f.classList.toggle("show",invStale); var b=$("#invCalc"); if(b)b.classList.toggle("needs",invStale); var res=$("#invResult"); if(res)res.classList.toggle("stale",invStale && res.innerHTML.trim()!==""); }
   function loadStore(k){ try{ return JSON.parse(localStorage.getItem(k)||"{}")||{}; }catch(e){ return {}; } }
   function saveStore(k,o){ try{ localStorage.setItem(k,JSON.stringify(o)); }catch(e){} }
   function nextMonthFirst(){ var d=new Date(),y=d.getFullYear(),nm=d.getMonth()+1; if(nm>11){nm=0;y++;} return y+"-"+String(nm+1).padStart(2,"0")+"-01"; }
@@ -406,7 +435,7 @@
     {sign:1, mag:"X",n:"36",freq:12,date:isoOf(addByFreq(b,12,1)), desc:"Lease payment",code:"PMT",noint:false},
     {sign:1, mag:"0.20 x OEC",n:"1",freq:12,date:isoOf(addByFreq(b,12,36)),desc:"Residual",code:"RES",noint:false}]; }
   function newLease(){ var base=nextMonthFirst(); invData=[{sign:-1,mag:"0",n:"1",freq:12,date:base,desc:"Original Equipment Cost",code:"OEC",noint:false}];
-    $("#invRate").value="7"; templateLock=false; currentName=""; currentKind=""; buildInv(); $("#invErr").classList.remove("show"); $("#invResult").innerHTML=""; }
+    $("#invRate").value="7"; templateLock=false; currentName=""; currentKind=""; buildInv(); $("#invErr").classList.remove("show"); $("#invResult").innerHTML=""; setStale(false); }
   function resetLease(){ var base=nextMonthFirst(); invData=defaultDeal(base); $("#invRate").value="7"; $("#invDay").value="act365"; templateLock=false; currentName=""; currentKind=""; buildInv(); runInv(false); }
   function syncInv(){ $$("#invRows .cf-line").forEach(function(r,i){ if(!invData[i])return; var q=function(s){return $(s,r);};
     var d=q(".cf-desc"); if(d)invData[i].desc=d.value;
@@ -420,7 +449,7 @@
     var dir=q(".dir"); if(dir)invData[i].sign=dir.classList.contains("out")?-1:1; }); }
   function runInv(commit){
     var err=$("#invErr");err.classList.remove("show");
-    try{ syncInv();
+    try{ syncInv(); renderWarnings();
       var dayb=$("#invDay").value;
       var rateStr=$("#invRate").value, rateUnknown=isUnk(rateStr);
       var baseRate=rateUnknown?NaN:num(rateStr)/100;
@@ -529,6 +558,7 @@
       /* on Solve/Analyze, replace formulas & the unknown with their resolved values */
       if(commit){ invData.forEach(function(r,i){ if(r.kind!=="rate") r.mag=magStr(lin[i].c+lin[i].k*xv); });
         if(rateUnknown) $("#invRate").value=(""+(Math.round(annual*100000)/1000)); buildInv(); }
+      setStale(false);
     }catch(e){ err.textContent=(typeof e==="string"?e:"Check your inputs."); err.classList.add("show"); $("#invResult").innerHTML=""; }
   }
   function drawFlowBars(c,cf){ var d=fitCanvas(c,180),ctx=d.ctx,pad={l:8,r:8,t:10,b:20},w=d.w-pad.l-pad.r,h=d.h-pad.t-pad.b;
@@ -556,11 +586,11 @@
   function addInvRow(noint){ syncInv();
     var last=invData[invData.length-1], nd=nextMonthFirst();
     if(last&&last.date){ var d0=parseDate(last.date); if(d0){ var n=Math.max(1,Math.round(num(last.n))||1), f=+last.freq||12; nd=isoOf(addByFreq(d0,f,n)); } }
-    invData.push({sign:1,mag:"0",n:"1",freq:(last&&last.freq)||12,date:nd,desc:noint?"Service":"",code:noint?"SERV":"",noint:!!noint}); buildInv(); }
+    invData.push({sign:1,mag:"0",n:"1",freq:(last&&last.freq)||12,date:nd,desc:noint?"Service":"",code:noint?"SERV":"",noint:!!noint}); buildInv(); setStale(true); }
   function addRateLine(){ syncInv();
     var last=invData[invData.length-1], nd=nextMonthFirst();
     if(last&&last.date){ var d0=parseDate(last.date); if(d0){ var n=Math.max(1,Math.round(num(last.n))||1), f=+last.freq||12; nd=isoOf(addByFreq(d0,f,last.kind==="rate"?1:n)); } }
-    invData.push({kind:"rate",mag:($("#invRate")?($("#invRate").value||"7"):"7"),date:nd,desc:"Rate change"}); buildInv(); }
+    invData.push({kind:"rate",mag:($("#invRate")?($("#invRate").value||"7"):"7"),date:nd,desc:"Rate change"}); buildInv(); setStale(true); }
   $("#invAdd").addEventListener("click",function(){ addInvRow(false); });
   $("#invAddSvc").addEventListener("click",function(){ addInvRow(true); });
   $("#invAddRate").addEventListener("click",addRateLine);
@@ -576,8 +606,8 @@
   $("#invImportFile").addEventListener("change",function(){ doImport(this.files&&this.files[0]); this.value=""; });
   refreshRecall();
   $("#invCalc").addEventListener("click",function(){ runInv(true); });
-  $("#invDay").addEventListener("change",function(){ runInv(false); });
-  $("#invRate").addEventListener("change",function(){ runInv(false); });
+  $("#invDay").addEventListener("change",function(){ setStale(true); });
+  $("#invRate").addEventListener("change",function(){ setStale(true); });
   $("#invRate").addEventListener("keydown",function(e){ if(e.key==="Enter")runInv(true); });
 
   function applyTheme(t){if(t)document.documentElement.setAttribute("data-theme",t);else document.documentElement.removeAttribute("data-theme");if(lastRedraw)setTimeout(lastRedraw,30);}
