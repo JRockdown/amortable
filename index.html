@@ -135,28 +135,32 @@
   .cf-row .dir.in{color:var(--pos);border-color:color-mix(in srgb,var(--pos) 40%,transparent)}
   .cf-row .dir.out{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 40%,transparent)}
   .cf-row .del{appearance:none;border:0;background:none;color:var(--faint);cursor:pointer;font-size:18px}
-  /* lease-builder cash-flow cards */
-  .cf-card{border:1px solid var(--line);border-radius:11px;background:var(--surface);padding:11px 12px 12px;margin-bottom:10px}
-  .cf-card.over{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
-  .cf-card.drag{opacity:.45}
-  .cf-top{display:grid;grid-template-columns:18px 40px 1fr 92px auto auto;gap:8px;align-items:center}
-  .cf-bot{display:grid;grid-template-columns:minmax(120px,150px) 1fr 76px auto;gap:8px;align-items:center;margin-top:8px}
-  .cf-card .inp{padding:8px 9px;font-size:13px}
-  .cf-card .dir{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;height:38px;cursor:pointer;font-family:var(--mono);font-weight:700;font-size:15px}
-  .cf-card .dir.in{color:var(--pos);border-color:color-mix(in srgb,var(--pos) 40%,transparent)}
-  .cf-card .dir.out{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 40%,transparent)}
-  .cf-grip{cursor:grab;color:var(--faint);font-size:15px;text-align:center;user-select:none;line-height:38px}
+  /* lease-builder — flat, one-line-per-flow spreadsheet feel */
+  .cf-scroll{overflow-x:auto;overflow-y:hidden;margin:0 -2px;padding-bottom:2px}
+  .cf-sheet{min-width:830px}
+  .cf-hd,.cf-line{display:grid;grid-template-columns:22px 40px minmax(150px,1.5fr) 78px 138px minmax(116px,1fr) 58px 50px 48px 28px;gap:6px;align-items:center}
+  .cf-hd{font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);padding:0 0 7px}
+  .cf-hd span{padding:0 2px}
+  .cf-hd .rt{text-align:center}
+  .cf-line{padding:4px 0}
+  .cf-line+.cf-line{border-top:1px solid var(--line)}
+  .cf-line.over{box-shadow:inset 0 0 0 2px var(--accent);border-radius:8px}
+  .cf-line.drag{opacity:.4}
+  .cf-line.noint{background:color-mix(in srgb,var(--surface-2) 55%,transparent)}
+  .cf-line .inp{padding:7px 8px;font-size:13px;height:36px}
+  .cf-line .dir{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;height:36px;cursor:pointer;font-family:var(--mono);font-weight:700;font-size:15px}
+  .cf-line .dir.in{color:var(--pos);border-color:color-mix(in srgb,var(--pos) 40%,transparent)}
+  .cf-line .dir.out{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 40%,transparent)}
+  .cf-grip{cursor:grab;color:var(--faint);font-size:15px;text-align:center;user-select:none;line-height:36px}
   .cf-code{text-transform:uppercase;font-family:var(--mono)!important;font-size:12px!important;letter-spacing:.03em}
-  .cf-move{display:flex;gap:3px}
-  .cf-move button,.cf-card .del{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:7px;color:var(--muted);cursor:pointer;width:28px;height:30px;font-size:13px;padding:0}
-  .cf-move button:hover,.cf-card .del:hover{color:var(--ink);border-color:var(--muted)}
-  .cf-nwrap{display:flex;align-items:center;gap:6px;font-family:var(--mono);color:var(--faint);font-size:14px}
-  .cf-nwrap .cf-n{width:100%}
-  .cf-noint{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);white-space:nowrap;cursor:pointer}
-  .cf-noint input{accent-color:var(--accent);margin:0}
-  .cf-card.noint{background:color-mix(in srgb,var(--surface-2) 60%,transparent);border-style:dashed}
-  .cf-tools{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 18px}
-  @media(max-width:580px){.cf-top{grid-template-columns:18px 40px 1fr auto auto}.cf-top .cf-code{grid-column:2/-1;height:auto}.cf-bot{grid-template-columns:1fr 1fr}.cf-bot .cf-noint{grid-column:1/-1}}
+  .cf-nb{text-align:center;font-variant-numeric:tabular-nums}
+  .cf-cint{display:flex;align-items:center;justify-content:center;height:36px}
+  .cf-cint input{accent-color:var(--accent);width:16px;height:16px;margin:0;cursor:pointer}
+  .cf-move{display:flex;gap:3px;justify-content:center}
+  .cf-move button,.cf-line .del{appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:6px;color:var(--muted);cursor:pointer;width:22px;height:32px;font-size:12px;padding:0;line-height:1}
+  .cf-line .del{width:26px;font-size:15px}
+  .cf-move button:hover,.cf-line .del:hover{color:var(--ink);border-color:var(--muted)}
+  .cf-tools{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}
   .cfhint{font-size:11px;color:var(--faint);margin:-4px 2px 10px}
   /* advanced */
   .adv-tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto}
@@ -287,7 +291,7 @@
 
   <!-- ===== INVESTMENT ===== -->
   <section class="view" id="v-invest">
-    <div style="max-width:720px;margin:0 auto">
+    <div style="max-width:980px;margin:0 auto">
       <div class="card">
         <div class="card-h"><h2>Lease Builder</h2><p>Lay out the cash flows of a lease, in date order. Give any line a <b>code</b> (like OEC) and reuse it elsewhere — a residual of <b>0.15 x OEC</b> updates itself. Put <b>X</b> in one or more amounts (or in the rate) and Solve fills it in.</p></div>
         <div class="card-b">
@@ -570,47 +574,47 @@
   var invDrag=null;
   function esc(s){ return (""+(s==null?"":s)).replace(/"/g,"&quot;"); }
   function buildInv(){ var host=$("#invRows");host.innerHTML="";
+    var scroll=document.createElement("div");scroll.className="cf-scroll";
+    var sheet=document.createElement("div");sheet.className="cf-sheet";
+    var hd=document.createElement("div");hd.className="cf-hd";
+    hd.innerHTML='<span></span><span></span><span>Description</span><span>Code</span><span>Date</span><span>Amount</span><span class="rt">×N</span><span class="rt">No int</span><span></span><span></span>';
+    sheet.appendChild(hd);
     invData.forEach(function(row,idx){
-      var el=document.createElement("div");el.className="cf-card"+(row.noint?" noint":"");
+      var el=document.createElement("div");el.className="cf-line"+(row.noint?" noint":"");
       var sc=row.sign<0?"out":"in";
       el.innerHTML=
-        '<div class="cf-top">'+
-          '<span class="cf-grip" title="Drag to reorder">⠿</span>'+
-          '<button type="button" class="dir '+sc+'" title="Money in / out">'+(sc==="in"?"＋":"－")+'</button>'+
-          '<input class="inp cf-desc" value="'+esc(row.desc)+'" placeholder="'+(row.sign<0?"e.g. Original Equipment Cost":"e.g. Lease payment")+'">'+
-          '<input class="inp cf-code" value="'+esc(row.code)+'" placeholder="'+(row.sign<0?"OEC":"CODE")+'" title="Short code — reuse in other lines, e.g. 0.15 x '+esc(row.code||"OEC")+'">'+
-          '<div class="cf-move"><button type="button" class="up" title="Move up">↑</button><button type="button" class="dn" title="Move down">↓</button></div>'+
-          '<button type="button" class="del" title="Remove">×</button>'+
-        '</div>'+
-        '<div class="cf-bot">'+
-          '<input class="inp cf-date" type="date" value="'+esc(row.date)+'">'+
-          '<input class="inp cf-mag" value="'+esc(row.mag)+'" placeholder="amount, or 0.15 x OEC, or X">'+
-          '<span class="cf-nwrap">×&nbsp;<input class="inp cf-n" value="'+esc(row.n)+'"></span>'+
-          '<label class="cf-noint"><input type="checkbox" class="cf-noint-cb"'+(row.noint?" checked":"")+'> no interest</label>'+
-        '</div>';
-      var dirEl=el.querySelector(".dir");
-      dirEl.addEventListener("click",function(){ syncInv(); invData[idx].sign=invData[idx].sign<0?1:-1; buildInv(); runInv(); });
+        '<span class="cf-grip" title="Drag to reorder">⠿</span>'+
+        '<button type="button" class="dir '+sc+'" title="Money in / out">'+(sc==="in"?"＋":"－")+'</button>'+
+        '<input class="inp cf-desc" value="'+esc(row.desc)+'" placeholder="'+(row.sign<0?"Original Equipment Cost":"Lease payment")+'">'+
+        '<input class="inp cf-code" value="'+esc(row.code)+'" placeholder="'+(row.sign<0?"OEC":"CODE")+'" title="Short code — reuse in other lines, e.g. 0.15 x '+esc(row.code||"OEC")+'">'+
+        '<input class="inp cf-date" type="date" value="'+esc(row.date)+'">'+
+        '<input class="inp cf-mag" value="'+esc(row.mag)+'" placeholder="amount / 0.15 x OEC / X">'+
+        '<input class="inp cf-n cf-nb" value="'+esc(row.n)+'">'+
+        '<span class="cf-cint"><input type="checkbox" class="cf-noint-cb"'+(row.noint?" checked":"")+' title="Pass-through, no interest"></span>'+
+        '<span class="cf-move"><button type="button" class="up" title="Move up">↑</button><button type="button" class="dn" title="Move down">↓</button></span>'+
+        '<button type="button" class="del" title="Remove">×</button>';
+      el.querySelector(".dir").addEventListener("click",function(){ syncInv(); invData[idx].sign=invData[idx].sign<0?1:-1; buildInv(); runInv(); });
       el.querySelector(".up").addEventListener("click",function(){ moveRow(idx,-1); });
       el.querySelector(".dn").addEventListener("click",function(){ moveRow(idx,1); });
       el.querySelector(".del").addEventListener("click",function(){ syncInv(); invData.splice(idx,1); if(!invData.length)invData.push({sign:-1,mag:"0",n:"1",date:"2026-11-01",desc:"",code:"",noint:false}); buildInv(); runInv(); });
       el.querySelector(".cf-noint-cb").addEventListener("change",function(){ syncInv(); invData[idx].noint=this.checked; buildInv(); runInv(); });
       $$("input",el).forEach(function(inp){ if(inp.type!=="checkbox") inp.addEventListener("change",function(){ syncInv(); runInv(); }); });
-      // drag to reorder (only from the grip)
       var grip=el.querySelector(".cf-grip");
       grip.addEventListener("mousedown",function(){ el.setAttribute("draggable","true"); });
       el.addEventListener("dragstart",function(e){ invDrag=idx; el.classList.add("drag"); e.dataTransfer.effectAllowed="move"; });
-      el.addEventListener("dragend",function(){ el.classList.remove("drag"); el.setAttribute("draggable","false"); $$(".cf-card").forEach(function(c){c.classList.remove("over");}); });
+      el.addEventListener("dragend",function(){ el.classList.remove("drag"); el.setAttribute("draggable","false"); $$(".cf-line").forEach(function(c){c.classList.remove("over");}); });
       el.addEventListener("dragover",function(e){ e.preventDefault(); el.classList.add("over"); });
       el.addEventListener("dragleave",function(){ el.classList.remove("over"); });
       el.addEventListener("drop",function(e){ e.preventDefault(); el.classList.remove("over"); if(invDrag==null||invDrag===idx)return; syncInv(); var it=invData.splice(invDrag,1)[0]; invData.splice(idx,0,it); invDrag=null; buildInv(); runInv(); });
-      host.appendChild(el);
+      sheet.appendChild(el);
     });
+    scroll.appendChild(sheet); host.appendChild(scroll);
   }
   function moveRow(i,dir){ syncInv(); var j=i+dir; if(j<0||j>=invData.length)return; var t=invData[i];invData[i]=invData[j];invData[j]=t; buildInv(); runInv(); }
   function rechainDates(){ syncInv(); var PY=parseInt($("#invPY").value,10)||12;
     for(var i=1;i<invData.length;i++){ var pd=parseDate(invData[i-1].date); if(!pd)continue; var pn=Math.max(1,Math.round(num(invData[i-1].n))||1); invData[i].date=isoOf(addByFreq(pd,PY,pn)); }
     buildInv(); runInv(); }
-  function syncInv(){ $$("#invRows .cf-card").forEach(function(r,i){ if(!invData[i])return;
+  function syncInv(){ $$("#invRows .cf-line").forEach(function(r,i){ if(!invData[i])return;
     invData[i].desc=$(".cf-desc",r).value; invData[i].code=$(".cf-code",r).value; invData[i].mag=$(".cf-mag",r).value;
     invData[i].n=$(".cf-n",r).value; invData[i].date=$(".cf-date",r).value; invData[i].noint=$(".cf-noint-cb",r).checked;
     invData[i].sign=$(".dir",r).classList.contains("out")?-1:1; }); }
