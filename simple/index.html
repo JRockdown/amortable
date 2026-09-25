@@ -168,6 +168,13 @@
   .lb-recalc{display:none;align-items:center;gap:8px;background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px dashed color-mix(in srgb,var(--accent) 50%,transparent);color:var(--accent-ink);border-radius:9px;padding:9px 13px;font-size:13px;margin-bottom:12px}
   .lb-recalc.show{display:flex}
   #invResult.stale{opacity:.4;filter:saturate(.55);transition:opacity .15s ease}
+  .payoff{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-top:16px}
+  .payoff-h{font-size:12px;font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  .payoff-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .payoff-row label{font-size:14px;color:var(--ink);display:flex;align-items:center;gap:8px}
+  .payoff-row .inp{width:auto;max-width:190px;padding:7px 9px;font-size:13px}
+  .payoff-val{font-family:var(--mono);font-weight:800;font-size:22px;color:var(--accent-ink)}
+  .payoff-note{font-size:12px;color:var(--faint);margin-top:8px}
   #invCalc.needs{animation:pulse 1.7s ease-out infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
   .btn:disabled{opacity:.5;cursor:not-allowed}
@@ -504,8 +511,19 @@
       if(!hasRateEv && !xInFlows && !isFinite(effIRR)) throw "No IRR exists — the cash flows must change sign (money out, then in).";
 
       /* amortize at the given APR schedule; for a pure-IRR solve use the solved APR so it closes to 0 */
-      var amortRate=(!hasRateEv && !xInFlows)?effIRR:baseRate;
-      var amRows=datedAmortVar(amFlows,makeBps(amortRate),dayb);
+      var amortRate=(!hasRateEv && !xInFlows)?effIRR:baseRate, amBps=makeBps(amortRate);
+      /* #4 auto-round a solved payment to the cent and reconcile the final payment so the balance closes to $0 */
+      var roundAdj=0, adjPay=null, adjIsPay=true;
+      if(solvedX!=null){ var Xr=Math.round(solvedX*100)/100;
+        amFlows=ib.map(function(fl){ return {date:fl.date, amt:fl.c+fl.k*Xr}; });
+        var probe=datedAmortVar(amFlows,amBps,dayb), R=probe.length?probe[probe.length-1].bal:0;
+        var maxDate=null; ib.forEach(function(fl){ if(maxDate==null||cmp(fl.date,maxDate)>0)maxDate=fl.date; });
+        var adjIdx=-1; ib.forEach(function(fl,i){ if(cmp(fl.date,maxDate)===0){ if(Math.abs(fl.k)>1e-9){adjIdx=i;adjIsPay=true;} else if(adjIdx<0){adjIdx=i;adjIsPay=false;} } });
+        if(adjIdx>=0){ amFlows[adjIdx].amt+=R; roundAdj=R; adjPay=amFlows[adjIdx].amt; }
+        solvedX=Xr; xv=Xr;
+      }
+      var amRows=datedAmortVar(amFlows,amBps,dayb);
+      var endBal=amRows.length?amRows[amRows.length-1].bal:0;
 
       var annual=isFinite(effIRR)?effIRR:(isFinite(baseRate)?baseRate:amortRate);
       var mfactor=annual/24; // money factor = APR / 2400
@@ -530,12 +548,19 @@
       var lb=0; var periods=porder.map(function(key){ var p=pmap[key]; if(p.bal==null)p.bal=lb; else lb=p.bal; p.total=p.cf+p.svc; return p; });
 
       var html='<div class="bigresult"><div class="rl">'+bigL+'</div><div class="rv" style="color:'+(bigC==="neg"?"var(--neg)":"var(--pos)")+'">'+bigV+'</div></div>';
-      html+='<div class="summary">This lease carries an implicit <b>'+(annual*100).toFixed(3)+'% APR</b> (money factor <b>'+mfactor.toFixed(5)+'</b>) over <b>'+termTxt+'</b>. On <b>'+money0(financed)+'</b> financed, the lessee pays <b>'+money0(totIn)+'</b> in total — <b>'+money0(totInt)+'</b> of that is finance charge (interest).'+(hasSvc?' A further <b>'+money0(svc)+'</b> of non-interest service is billed alongside, for <b>'+money0(totIn+svc)+'</b> all-in.':'')+(solvedX!=null?' Solved <b>X = '+money(solvedX)+'</b> per occurrence.':'')+'</div>';
-      html+='<div class="statgrid">'+statHTML("Implicit APR",(annual*100).toFixed(3)+"%")+statHTML("Money factor",mfactor.toFixed(5))+statHTML("Term",termMo+" mo")+statHTML("Amount financed",money0(financed))+statHTML("Total payments",money0(totIn))+statHTML("Total interest",money0(totInt))+(hasSvc?statHTML("Service (no int.)",money0(svc)):statHTML("Interest flows",ib.length+""))+'</div>';
+      html+='<div class="summary">This lease carries an implicit <b>'+(annual*100).toFixed(3)+'% APR</b> (money factor <b>'+mfactor.toFixed(5)+'</b>) over <b>'+termTxt+'</b>. On <b>'+money0(financed)+'</b> financed, the lessee pays <b>'+money0(totIn)+'</b> in total — <b>'+money0(totInt)+'</b> of that is finance charge (interest).'+(hasSvc?' A further <b>'+money0(svc)+'</b> of non-interest service is billed alongside, for <b>'+money0(totIn+svc)+'</b> all-in.':'')+(solvedX!=null?' Solved payment <b>'+money(solvedX)+'</b>'+(Math.abs(roundAdj)>=0.005?' (final '+(adjIsPay?'payment':'cash flow')+' <b>'+money(adjPay)+'</b> so the balance closes to $0)':'')+'.':'')+(solvedX==null&&Math.abs(endBal)>0.005?' <b class="neg">Ends with an open balance of '+money0(endBal)+'</b> — add a payoff line or adjust a cash flow to clear it.':'')+'</div>';
+      html+='<div class="statgrid">'+statHTML("Implicit APR",(annual*100).toFixed(3)+"%")+statHTML("Money factor",mfactor.toFixed(5))+(solvedX!=null&&financed>0?statHTML("Rate factor",(solvedX/financed).toFixed(5)):"")+statHTML("Term",termMo+" mo")+statHTML("Amount financed",money0(financed))+statHTML("Total payments",money0(totIn))+statHTML("Total interest",money0(totInt))+(hasSvc?statHTML("Service (no int.)",money0(svc)):statHTML("Interest flows",ib.length+""))+'</div>';
       html+='<div class="charts"><div class="chartbox"><h4>'+(hasSvc?"Total each period":"Cash flows")+'</h4><canvas id="invBars"></canvas></div><div class="chartbox"><h4>Cumulative (payback)</h4><canvas id="invArea"></canvas></div></div>';
       var cols=hasSvc?'<th>Date</th><th>Financed</th><th>Interest</th><th>Balance</th><th>Service</th><th>Total pay</th>':'<th>Date</th><th>Cash flow</th><th>Interest</th><th>Balance</th>';
+      html+='<div class="payoff"><div class="payoff-h">Balance on a date</div><div class="payoff-row"><label>Balance after <select class="inp" id="invPayIdx"></select></label><span class="payoff-val" id="invPayOut">—</span></div><div class="payoff-note">Outstanding financed balance right after that payment — the basis for an early-payoff or buyout quote.</div></div>';
       html+='<details class="sched" open><summary>'+(hasSvc?"Payment schedule":"Amortization schedule")+'<span class="tw" id="invCsv">CSV ↓</span></summary><div class="twrap"><table><thead><tr>'+cols+'</tr></thead><tbody id="invAmBody"></tbody></table></div></details>';
       $("#invResult").innerHTML=html;
+      (function(){ var psel=$("#invPayIdx"); if(!psel)return; var idxs=[]; amRows.forEach(function(r,i){ if(!r.isRate)idxs.push(i); });
+        psel.innerHTML=idxs.map(function(i){ return '<option value="'+i+'">'+fmtDate(amRows[i].date)+'</option>'; }).join("");
+        var di=idxs.length?idxs[Math.min(idxs.length-1,Math.max(0,Math.floor(idxs.length/2)))]:0; psel.value=""+di;
+        function showPay(){ var r=amRows[+psel.value]; if(r)$("#invPayOut").textContent=money(Math.max(0,r.bal)); }
+        psel.addEventListener("change",showPay); showPay();
+      })();
       function col(v,bold){ return '<td'+(bold?' style="font-weight:600;color:'+(v<0?"var(--neg)":"var(--pos)")+'"':(' style="color:'+(v<0?"var(--neg)":"var(--pos)")+'"'))+'>'+money(v)+'</td>'; }
       var bod=$("#invAmBody"),frag=document.createDocumentFragment();
       periods.forEach(function(p){ var tr=document.createElement("tr"); if(p.rateChange!=null)tr.className="rc-row";
