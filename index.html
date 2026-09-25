@@ -613,7 +613,11 @@
   }
   function moveRow(i,dir){ syncInv(); var j=i+dir; if(j<0||j>=invData.length)return; var t=invData[i];invData[i]=invData[j];invData[j]=t; buildInv(); runInv(); }
   function rechainDates(){ syncInv(); var PY=parseInt($("#invPY").value,10)||12;
-    for(var i=1;i<invData.length;i++){ var pd=parseDate(invData[i-1].date); if(!pd)continue; var pn=Math.max(1,Math.round(num(invData[i-1].n))||1); invData[i].date=isoOf(addByFreq(pd,PY,pn)); }
+    // chain each group in its own order; group's first line keeps its date as anchor
+    function chain(idxs){ for(var j=1;j<idxs.length;j++){ var pd=parseDate(invData[idxs[j-1]].date); if(!pd)continue; var pn=Math.max(1,Math.round(num(invData[idxs[j-1]].n))||1); invData[idxs[j]].date=isoOf(addByFreq(pd,PY,pn)); } }
+    // service (no-interest) lines run in parallel to the lease, so chain them as their own group
+    var lease=[],svc=[]; invData.forEach(function(r,i){ (r.noint?svc:lease).push(i); });
+    chain(lease); chain(svc);
     buildInv(); runInv(); }
   function syncInv(){ $$("#invRows .cf-line").forEach(function(r,i){ if(!invData[i])return;
     invData[i].desc=$(".cf-desc",r).value; invData[i].code=$(".cf-code",r).value; invData[i].mag=$(".cf-mag",r).value;
