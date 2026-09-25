@@ -359,6 +359,7 @@
   function isUnk(s){ return /^(x|u|\?|unknown)$/i.test((""+(s==null?"":s)).trim()); }
   function money(x){ if(!isFinite(x))return "—"; var n=Math.round(x*100)/100,neg=n<0;n=Math.abs(n); return (neg?"-$":"$")+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function money0(x){ if(!isFinite(x))return "—"; return (x<0?"-$":"$")+Math.abs(Math.round(x)).toLocaleString("en-US"); }
+  function magStr(v){ if(!isFinite(v))return "0"; return ""+(Math.round(v*100)/100); }
   function pct(x,d){ if(!isFinite(x))return "—"; return (x*100).toFixed(d==null?3:d)+"%"; }
   function cssv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
   /* ---- dates & day-count ---- */
@@ -618,7 +619,7 @@
     invData[i].desc=$(".cf-desc",r).value; invData[i].code=$(".cf-code",r).value; invData[i].mag=$(".cf-mag",r).value;
     invData[i].n=$(".cf-n",r).value; invData[i].date=$(".cf-date",r).value; invData[i].noint=$(".cf-noint-cb",r).checked;
     invData[i].sign=$(".dir",r).classList.contains("out")?-1:1; }); }
-  function runInv(){
+  function runInv(commit){
     var err=$("#invErr");err.classList.remove("show");
     try{ syncInv();
       var PY=parseInt($("#invPY").value,10)||12, dayb=$("#invDay").value;
@@ -681,21 +682,42 @@
       var sortd=amFlows.slice().sort(function(a,b){return Date.UTC(a.date.y,a.date.m-1,a.date.d)-Date.UTC(b.date.y,b.date.m-1,b.date.d);});
       var termMo=Math.round(yearFrac(sortd[0].date,sortd[sortd.length-1].date,"act365")*12);
       var svc=0; ni.forEach(function(fl){ svc+=(fl.c+fl.k*xv); });
+      var hasSvc=ni.length>0;
       var termTxt=termMo+" mo"+(termMo>=12?" ("+(termMo/12).toFixed(termMo%12?1:0)+" yr)":"");
 
+      /* merge interest-bearing + service into one schedule, aggregated by date */
+      var svcMap={}; ni.forEach(function(fl){ var key=isoOf(fl.date); if(!svcMap[key])svcMap[key]={date:fl.date,amt:0}; svcMap[key].amt+=(fl.c+fl.k*xv); });
+      var pmap={},porder=[];
+      amRows.forEach(function(r){ var key=isoOf(r.date); if(!pmap[key]){pmap[key]={date:r.date,cf:0,interest:0,bal:r.bal,svc:0,ib:true};porder.push(key);} pmap[key].cf+=r.cf; pmap[key].interest+=r.interest; pmap[key].bal=r.bal; });
+      Object.keys(svcMap).forEach(function(key){ if(!pmap[key]){pmap[key]={date:svcMap[key].date,cf:0,interest:0,bal:null,svc:0,ib:false};porder.push(key);} pmap[key].svc=svcMap[key].amt; });
+      porder.sort();
+      var lb=0; var periods=porder.map(function(key){ var p=pmap[key]; if(p.bal==null)p.bal=lb; else lb=p.bal; p.total=p.cf+p.svc; return p; });
+
       var html='<div class="bigresult"><div class="rl">'+bigL+'</div><div class="rv" style="color:'+(bigC==="neg"?"var(--neg)":"var(--pos)")+'">'+bigV+'</div></div>';
-      html+='<div class="summary">This lease returns <b>'+(annual*100).toFixed(2)+'%</b> a year over <b>'+termTxt+'</b>. On <b>'+money0(financed)+'</b> financed, the lessee pays <b>'+money0(totIn)+'</b> in total — <b>'+money0(totInt)+'</b> of that is finance charge (interest).'+(Math.abs(svc)>0.005?' A further <b>'+money0(svc)+'</b> of non-interest service is billed alongside.':'')+(solvedX!=null?' Solved <b>X = '+money(solvedX)+'</b> per occurrence.':'')+'</div>';
-      html+='<div class="statgrid">'+statHTML("Implicit rate / yr",(annual*100).toFixed(3)+"%")+statHTML("Term",termMo+" mo")+statHTML("Amount financed",money0(financed))+statHTML("Total payments",money0(totIn))+statHTML("Total interest",money0(totInt))+(Math.abs(svc)>0.005?statHTML("Service (no int.)",money0(svc)):statHTML("Interest flows",ib.length+""))+'</div>';
-      html+='<div class="charts"><div class="chartbox"><h4>Cash flows</h4><canvas id="invBars"></canvas></div><div class="chartbox"><h4>Cumulative (payback)</h4><canvas id="invArea"></canvas></div></div>';
-      html+='<details class="sched" open><summary>Amortization schedule<span class="tw" id="invCsv">CSV ↓</span></summary><div class="twrap"><table><thead><tr><th>Date</th><th>Cash flow</th><th>Interest</th><th>Balance</th></tr></thead><tbody id="invAmBody"></tbody></table></div></details>';
+      html+='<div class="summary">This lease returns <b>'+(annual*100).toFixed(2)+'%</b> a year over <b>'+termTxt+'</b>. On <b>'+money0(financed)+'</b> financed, the lessee pays <b>'+money0(totIn)+'</b> in total — <b>'+money0(totInt)+'</b> of that is finance charge (interest).'+(hasSvc?' A further <b>'+money0(svc)+'</b> of non-interest service is billed alongside, for <b>'+money0(totIn+svc)+'</b> all-in.':'')+(solvedX!=null?' Solved <b>X = '+money(solvedX)+'</b> per occurrence.':'')+'</div>';
+      html+='<div class="statgrid">'+statHTML("Implicit rate / yr",(annual*100).toFixed(3)+"%")+statHTML("Term",termMo+" mo")+statHTML("Amount financed",money0(financed))+statHTML("Total payments",money0(totIn))+statHTML("Total interest",money0(totInt))+(hasSvc?statHTML("Service (no int.)",money0(svc)):statHTML("Interest flows",ib.length+""))+'</div>';
+      html+='<div class="charts"><div class="chartbox"><h4>'+(hasSvc?"Total each period":"Cash flows")+'</h4><canvas id="invBars"></canvas></div><div class="chartbox"><h4>Cumulative (payback)</h4><canvas id="invArea"></canvas></div></div>';
+      var cols=hasSvc?'<th>Date</th><th>Financed</th><th>Interest</th><th>Balance</th><th>Service</th><th>Total pay</th>':'<th>Date</th><th>Cash flow</th><th>Interest</th><th>Balance</th>';
+      html+='<details class="sched" open><summary>'+(hasSvc?"Payment schedule":"Amortization schedule")+'<span class="tw" id="invCsv">CSV ↓</span></summary><div class="twrap"><table><thead><tr>'+cols+'</tr></thead><tbody id="invAmBody"></tbody></table></div></details>';
       $("#invResult").innerHTML=html;
+      function col(v,bold){ return '<td'+(bold?' style="font-weight:600;color:'+(v<0?"var(--neg)":"var(--pos)")+'"':(' style="color:'+(v<0?"var(--neg)":"var(--pos)")+'"'))+'>'+money(v)+'</td>'; }
       var bod=$("#invAmBody"),frag=document.createDocumentFragment();
-      amRows.forEach(function(r){ var tr=document.createElement("tr"); tr.innerHTML='<td>'+fmtDate(r.date)+'</td><td style="color:'+(r.cf<0?"var(--neg)":"var(--pos)")+'">'+money(r.cf)+'</td><td>'+money(r.interest)+'</td><td>'+money(r.bal)+'</td>'; frag.appendChild(tr); });
+      periods.forEach(function(p){ var tr=document.createElement("tr");
+        var s='<td>'+fmtDate(p.date)+'</td>'+col(p.cf)+'<td>'+money(p.interest)+'</td><td>'+money(p.bal)+'</td>';
+        if(hasSvc) s+=col(p.svc)+col(p.total,true);
+        tr.innerHTML=s; frag.appendChild(tr); });
       bod.appendChild(frag);
-      $("#invCsv").addEventListener("click",function(ev){ ev.preventDefault(); var lines=["Date,Cash flow,Interest,Balance"]; amRows.forEach(function(r){lines.push([isoOf(r.date),r.cf.toFixed(2),r.interest.toFixed(2),r.bal.toFixed(2)].join(","))}); dl(lines.join("\n"),"lease-amortization.csv"); });
-      var chartS=amRows.map(function(r){return r.cf}),cum=[],run=0; chartS.forEach(function(v){run+=v;cum.push(run);});
+      $("#invCsv").addEventListener("click",function(ev){ ev.preventDefault();
+        var lines=[hasSvc?"Date,Financed,Interest,Balance,Service,Total":"Date,Cash flow,Interest,Balance"];
+        periods.forEach(function(p){ var row=[isoOf(p.date),p.cf.toFixed(2),p.interest.toFixed(2),p.bal.toFixed(2)]; if(hasSvc)row.push(p.svc.toFixed(2),p.total.toFixed(2)); lines.push(row.join(",")); });
+        dl(lines.join("\n"),"lease-schedule.csv"); });
+      var chartS=periods.map(function(p){return p.total;}),cum=[],run=0; chartS.forEach(function(v){run+=v;cum.push(run);});
       drawFlowBars($("#invBars"),chartS); drawCum($("#invArea"),cum);
       lastRedraw=function(){ if($("#invBars")){drawFlowBars($("#invBars"),chartS);drawCum($("#invArea"),cum);} };
+
+      /* on Solve/Analyze, replace formulas & the unknown with their resolved values */
+      if(commit){ invData.forEach(function(r,i){ r.mag=magStr(lin[i].c+lin[i].k*xv); });
+        if(rateUnknown) $("#invRate").value=(""+(Math.round(annual*100000)/1000)); buildInv(); }
     }catch(e){ err.textContent=(typeof e==="string"?e:"Check your inputs."); err.classList.add("show"); $("#invResult").innerHTML=""; }
   }
   function drawFlowBars(c,cf){ var d=fitCanvas(c,180),ctx=d.ctx,pad={l:8,r:8,t:10,b:20},w=d.w-pad.l-pad.r,h=d.h-pad.t-pad.b;
@@ -771,11 +793,11 @@
   $("#invAdd").addEventListener("click",function(){ addInvRow(false); });
   $("#invAddSvc").addEventListener("click",function(){ addInvRow(true); });
   $("#invRechain").addEventListener("click",rechainDates);
-  $("#invCalc").addEventListener("click",runInv);
-  $("#invDay").addEventListener("change",runInv);
-  $("#invPY").addEventListener("change",runInv);
-  $("#invRate").addEventListener("change",runInv);
-  $("#invRate").addEventListener("keydown",function(e){ if(e.key==="Enter")runInv(); });
+  $("#invCalc").addEventListener("click",function(){ runInv(true); });
+  $("#invDay").addEventListener("change",function(){ runInv(false); });
+  $("#invPY").addEventListener("change",function(){ runInv(false); });
+  $("#invRate").addEventListener("change",function(){ runInv(false); });
+  $("#invRate").addEventListener("keydown",function(e){ if(e.key==="Enter")runInv(true); });
   $("#tvmCalc").addEventListener("click",runTVM);
   $$(".adv-tab").forEach(function(t){t.addEventListener("click",function(){$$(".adv-tab").forEach(function(x){x.setAttribute("aria-selected","false")});t.setAttribute("aria-selected","true");$$(".apanel").forEach(function(p){p.classList.remove("active")});$("#"+t.dataset.ap).classList.add("active");});});
   // enter-to-calc on loan/lease inputs
