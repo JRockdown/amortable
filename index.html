@@ -206,7 +206,7 @@
         <div class="card-h"><h2>Lease Builder</h2><p>Lay out the cash flows of a lease, in date order. Give any line a <b>code</b> (like OEC) and reuse it elsewhere — a residual of <b>0.15 x OEC</b> updates itself. Put <b>X</b> in one or more amounts (or in the rate) and Solve fills it in.</p></div>
         <div class="card-b">
           <div class="lb-controls">
-            <label class="lbc">Rate <span class="inwrap pct"><input class="inp" id="invRate" value="7"><span class="post">%</span></span> <span class="lbc-sub">/yr · or X → IRR</span></label>
+            <label class="lbc">APR <span class="inwrap pct"><input class="inp" id="invRate" value="7"><span class="post">%</span></span> <span class="lbc-sub">nominal /yr · or X → solve</span></label>
             <label class="lbc">Basis <select class="inp" id="invDay"><option value="act365">Actual/365</option><option value="act360">Actual/360</option><option value="d3030">30/360 US</option><option value="actact">Actual/Actual</option></select></label>
           </div>
           <div class="lb-status" id="invStatus"></div>
@@ -259,7 +259,7 @@
     for(var i=1;i<bps.length;i++) evs.push({date:bps[i].date,t:0,rate:bps[i].rate});
     evs.sort(function(a,b){var c=cmp(a.date,b.date);return c!==0?c:(a.t-b.t);});
     var cur=bps[0].rate,bal=0,prev=null,rows=[];
-    evs.forEach(function(ev){ var interest=0; if(prev){ var yf=yearFrac(prev,ev.date,dayb); interest=bal*(Math.pow(1+cur,yf)-1); bal=bal*Math.pow(1+cur,yf); }
+    evs.forEach(function(ev){ var interest=0; if(prev){ var yf=yearFrac(prev,ev.date,dayb); interest=bal*cur*yf; bal=bal+interest; }
       if(ev.t===0){ cur=ev.rate; rows.push({date:ev.date,cf:0,interest:interest,bal:bal,isRate:true,rate:cur}); }
       else { bal=bal-ev.amt; rows.push({date:ev.date,cf:ev.amt,interest:interest,bal:bal}); }
       prev=ev.date; });
@@ -491,15 +491,22 @@
       function cmp(a,b){ return Date.UTC(a.y,a.m-1,a.d)-Date.UTC(b.y,b.m-1,b.d); }
       var sortedEv=rateEv.slice().sort(function(a,b){return cmp(a.date,b.date);});
       function makeBps(base){ var startRate=base, future=[]; sortedEv.forEach(function(e){ if(cmp(e.date,ref)<=0) startRate=e.rate; else future.push(e); }); return [{date:ref,rate:startRate}].concat(future); }
-      function growthTo(bps,D){ var g=1; for(var i=0;i<bps.length;i++){ var start=bps[i].date, rate=bps[i].rate, end=(i+1<bps.length)?bps[i+1].date:null; if(cmp(start,D)>=0)break; var segEnd=(end&&cmp(end,D)<0)?end:D; g*=Math.pow(1+rate,yearFrac(start,segEnd,dayb)); if(!(end&&cmp(end,D)<0))break; } return g; }
-      function irrOf(flows){ function f(r){var s=0;flows.forEach(function(fl){s+=fl.amt*Math.pow(1+r,-yearFrac(ref,fl.date,dayb));});return s;}
-        var a=-0.9999,fa=f(a),step=0.004,x=a+step,b; while(x<=3){var fx=f(x);if(fa*fx<0){b=x;break;}a=x;fa=fx;x+=step;}
-        if(b===undefined)return NaN; for(var it=0;it<240;it++){var m=(a+b)/2,fm=f(m);if(Math.abs(fm)<1e-7||(b-a)<1e-13)return m;if(f(a)*fm<0)b=m;else a=m;} return (a+b)/2; }
+      // APR in force at/just-after a date, given a starting APR
+      function aprAt(s,base){ var a=base; for(var i=0;i<sortedEv.length;i++){ if(cmp(sortedEv[i].date,s)<=0) a=sortedEv[i].rate; } return a; }
+      // compounding boundaries: ref + every interest-bearing flow date + every rate-change date (unique, sorted)
+      var bd=[],seen={}; function addBd(d){ var kk=isoOf(d); if(!seen[kk]){seen[kk]=1; bd.push(d);} }
+      addBd(ref); ib.forEach(function(fl){ addBd(fl.date); }); sortedEv.forEach(function(e){ if(cmp(e.date,ref)>0)addBd(e.date); }); bd.sort(cmp);
+      // APR applied LINEARLY over the basis year-fraction, compounded at each boundary → basis defines the compounding
+      function dfMap(base){ var m={},cur=1,prev=null; bd.forEach(function(d){ if(prev){ var a=aprAt(prev,base); cur=cur/(1+a*yearFrac(prev,d,dayb)); } m[isoOf(d)]=cur; prev=d; }); return m; }
+      function npvAt(base,flows){ var m=dfMap(base); return flows.reduce(function(s,fl){return s+fl.amt*m[isoOf(fl.date)];},0); }
+      function irrOf(flows){ function f(r){return npvAt(r,flows);} var a=-0.9999,fa=f(a),step=0.004,x=a+step,b;
+        while(x<=3){var fx=f(x);if(fa*fx<0){b=x;break;}a=x;fa=fx;x+=step;}
+        if(b===undefined)return NaN; for(var it=0;it<240;it++){var mm=(a+b)/2,fm=f(mm);if(Math.abs(fm)<1e-7||(b-a)<1e-13)return mm;if(f(a)*fm<0)b=mm;else a=mm;} return (a+b)/2; }
 
-      /* solve the unknown payment X, if any, at the (possibly stepped) rate */
+      /* solve the unknown payment X, if any, at the (possibly stepped) APR */
       var solvedX=null;
-      if(xInFlows){ var sb=makeBps(baseRate), df=ib.map(function(fl){return 1/growthTo(sb,fl.date);}),A=0,B=0;
-        ib.forEach(function(fl,i){ A+=fl.c*df[i]; B+=fl.k*df[i]; });
+      if(xInFlows){ var dfm=dfMap(baseRate),A=0,B=0;
+        ib.forEach(function(fl){ var d=dfm[isoOf(fl.date)]; A+=fl.c*d; B+=fl.k*d; });
         if(Math.abs(B)<1e-12) throw "X doesn't move the result — check where you used it.";
         solvedX=-A/B; }
       var xv=solvedX==null?0:solvedX;
@@ -507,14 +514,15 @@
       var effIRR=irrOf(amFlows);
       if(!hasRateEv && !xInFlows && !isFinite(effIRR)) throw "No IRR exists — the cash flows must change sign (money out, then in).";
 
-      /* amortize at the given rate schedule; for a pure-IRR solve use the solved rate so it closes to 0 */
+      /* amortize at the given APR schedule; for a pure-IRR solve use the solved APR so it closes to 0 */
       var amortRate=(!hasRateEv && !xInFlows)?effIRR:baseRate;
       var amRows=datedAmortVar(amFlows,makeBps(amortRate),dayb);
 
       var annual=isFinite(effIRR)?effIRR:(isFinite(baseRate)?baseRate:amortRate);
+      var mfactor=annual/24; // money factor = APR / 2400
       var bigL,bigV,bigC;
       if(solvedX!=null){ bigL="Solve for X"; bigV=money(solvedX); bigC=solvedX<0?"neg":"pos"; }
-      else { bigL=hasRateEv?"Effective rate · IRR":"Implicit rate · IRR"; bigV=(annual*100).toFixed(3)+"% <small>/ yr</small>"; bigC="pos"; }
+      else { bigL=hasRateEv?"Implicit APR · yield":"Implicit rate · APR"; bigV=(annual*100).toFixed(3)+"% <small>/ yr</small>"; bigC="pos"; }
 
       var totInt=amRows.reduce(function(s,r){return s+r.interest;},0);
       var financed=0,totIn=0; amFlows.forEach(function(fl){ if(fl.amt<0)financed+=-fl.amt; else totIn+=fl.amt; });
@@ -533,8 +541,8 @@
       var lb=0; var periods=porder.map(function(key){ var p=pmap[key]; if(p.bal==null)p.bal=lb; else lb=p.bal; p.total=p.cf+p.svc; return p; });
 
       var html='<div class="bigresult"><div class="rl">'+bigL+'</div><div class="rv" style="color:'+(bigC==="neg"?"var(--neg)":"var(--pos)")+'">'+bigV+'</div></div>';
-      html+='<div class="summary">This lease returns <b>'+(annual*100).toFixed(2)+'%</b> a year over <b>'+termTxt+'</b>. On <b>'+money0(financed)+'</b> financed, the lessee pays <b>'+money0(totIn)+'</b> in total — <b>'+money0(totInt)+'</b> of that is finance charge (interest).'+(hasSvc?' A further <b>'+money0(svc)+'</b> of non-interest service is billed alongside, for <b>'+money0(totIn+svc)+'</b> all-in.':'')+(solvedX!=null?' Solved <b>X = '+money(solvedX)+'</b> per occurrence.':'')+'</div>';
-      html+='<div class="statgrid">'+statHTML("Implicit rate / yr",(annual*100).toFixed(3)+"%")+statHTML("Term",termMo+" mo")+statHTML("Amount financed",money0(financed))+statHTML("Total payments",money0(totIn))+statHTML("Total interest",money0(totInt))+(hasSvc?statHTML("Service (no int.)",money0(svc)):statHTML("Interest flows",ib.length+""))+'</div>';
+      html+='<div class="summary">This lease carries an implicit <b>'+(annual*100).toFixed(3)+'% APR</b> (money factor <b>'+mfactor.toFixed(5)+'</b>) over <b>'+termTxt+'</b>. On <b>'+money0(financed)+'</b> financed, the lessee pays <b>'+money0(totIn)+'</b> in total — <b>'+money0(totInt)+'</b> of that is finance charge (interest).'+(hasSvc?' A further <b>'+money0(svc)+'</b> of non-interest service is billed alongside, for <b>'+money0(totIn+svc)+'</b> all-in.':'')+(solvedX!=null?' Solved <b>X = '+money(solvedX)+'</b> per occurrence.':'')+'</div>';
+      html+='<div class="statgrid">'+statHTML("Implicit APR",(annual*100).toFixed(3)+"%")+statHTML("Money factor",mfactor.toFixed(5))+statHTML("Term",termMo+" mo")+statHTML("Amount financed",money0(financed))+statHTML("Total payments",money0(totIn))+statHTML("Total interest",money0(totInt))+(hasSvc?statHTML("Service (no int.)",money0(svc)):statHTML("Interest flows",ib.length+""))+'</div>';
       html+='<div class="charts"><div class="chartbox"><h4>'+(hasSvc?"Total each period":"Cash flows")+'</h4><canvas id="invBars"></canvas></div><div class="chartbox"><h4>Cumulative (payback)</h4><canvas id="invArea"></canvas></div></div>';
       var cols=hasSvc?'<th>Date</th><th>Financed</th><th>Interest</th><th>Balance</th><th>Service</th><th>Total pay</th>':'<th>Date</th><th>Cash flow</th><th>Interest</th><th>Balance</th>';
       html+='<details class="sched" open><summary>'+(hasSvc?"Payment schedule":"Amortization schedule")+'<span class="tw" id="invCsv">CSV ↓</span></summary><div class="twrap"><table><thead><tr>'+cols+'</tr></thead><tbody id="invAmBody"></tbody></table></div></details>';
