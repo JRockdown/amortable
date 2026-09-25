@@ -310,8 +310,8 @@
   /* ================= INVESTMENT FLOW ================= */
   var invData=[
     {sign:-1, mag:"2500000",     n:"1",  freq:12, date:"2026-11-01", desc:"Original Equipment Cost", code:"OEC", noint:false},
-    {sign:1,  mag:"X",           n:"6",  freq:12, date:"2026-12-01", desc:"Lease payment",           code:"PMT", noint:false},
-    {sign:1,  mag:"0.20 x OEC",  n:"1",  freq:12, date:"2027-05-01", desc:"Residual",                code:"RES", noint:false}
+    {sign:1,  mag:"X",           n:"60",  freq:12, date:"2026-12-01", desc:"Lease payment",           code:"PMT", noint:false},
+    {sign:1,  mag:"0.20 x OEC",  n:"1",  freq:12, date:"2031-11-01", desc:"Residual",                code:"RES", noint:false}
   ];
   var FREQOPTS=[[12,"Monthly"],[4,"Quarterly"],[2,"Semi"],[1,"Annual"]];
   function freqSel(v){ v=+v||12; return '<select class="inp cf-per">'+FREQOPTS.map(function(o){return '<option value="'+o[0]+'"'+(o[0]===v?" selected":"")+'>'+o[1]+'</option>';}).join("")+'</select>'; }
@@ -432,8 +432,8 @@
     r.readAsText(file); }
   function defaultDeal(base){ var b=parseDate(base); return [
     {sign:-1,mag:"2500000",n:"1",freq:12,date:base,desc:"Original Equipment Cost",code:"OEC",noint:false},
-    {sign:1, mag:"X",n:"6",freq:12,date:isoOf(addByFreq(b,12,1)), desc:"Lease payment",code:"PMT",noint:false},
-    {sign:1, mag:"0.20 x OEC",n:"1",freq:12,date:isoOf(addByFreq(b,12,6)),desc:"Residual",code:"RES",noint:false}]; }
+    {sign:1, mag:"X",n:"60",freq:12,date:isoOf(addByFreq(b,12,1)), desc:"Lease payment",code:"PMT",noint:false},
+    {sign:1, mag:"0.20 x OEC",n:"1",freq:12,date:isoOf(addByFreq(b,12,60)),desc:"Residual",code:"RES",noint:false}]; }
   function newLease(){ var base=nextMonthFirst(); invData=[{sign:-1,mag:"0",n:"1",freq:12,date:base,desc:"Original Equipment Cost",code:"OEC",noint:false}];
     $("#invRate").value="4"; templateLock=false; currentName=""; currentKind=""; buildInv(); $("#invErr").classList.remove("show"); $("#invResult").innerHTML=""; setStale(false); }
   function resetLease(){ var base=nextMonthFirst(); invData=defaultDeal(base); $("#invRate").value="4"; $("#invDay").value="act365"; templateLock=false; currentName=""; currentKind=""; buildInv(); runInv(false); }
